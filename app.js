@@ -162,7 +162,24 @@ function buildAttMessageFunction(attachment) {
             } else {
                 //here we have none or some other decoding streamed directly to the file which renders it useless probably
                 
-                    var lel = utf8.decode(quotedPrintable.decode(stream));
+                    //var lel = utf8.decode(quotedPrintable.decode(stream));
+                    var buffer = "";
+                    stream.on('data', function(chunk){
+                        buffer += chunk;
+                    })
+                    stream.on('end', function(){
+                        console.log("Done buffering");
+                        var buffer2 = utf8.decode(quotedPrintable.decode(buffer));
+                        console.log("Done conver");
+                        fs.writeFile('Files/' + 'msg-' + seqno + '-mel.xml', buffer2, function (err) {
+                            if (err) {
+                                return console.log(err);
+                            }
+    
+                            console.log("The file was saved!");
+                        });
+                    })
+                    //stream.pipe(writeStream);
                    
                 
             }
