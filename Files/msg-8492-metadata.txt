@@ -1,0 +1,45 @@
+{
+  "attachments": [],
+  "headers": {},
+  "headerLines": [
+    {
+      "key": "from",
+      "line": "From: <focuscontable@gmail.com>"
+    },
+    {
+      "key": "to",
+      "line": "To: <juansB827@gmail.com>"
+    },
+    {
+      "key": "subject",
+      "line": "Subject: =?us-ascii?Q?Factura_electronica_No_FV-980001380_En_Formato_XML_y_PDF_?="
+    },
+    {
+      "key": "date",
+      "line": "Date: Sat, 22 Sep 2018 12:34:36 -0500"
+    }
+  ],
+  "subject": "Factura electronica No FV-980001380 En Formato XML y PDF ",
+  "date": "2018-09-22T17:34:36.000Z",
+  "to": {
+    "value": [
+      {
+        "address": "juansB827@gmail.com",
+        "name": ""
+      }
+    ],
+    "html": "<span class=\"mp_address_group\"><a href=\"mailto:juansB827@gmail.com\" class=\"mp_address_email\">juansB827@gmail.com</a></span>",
+    "text": "juansB827@gmail.com"
+  },
+  "from": {
+    "value": [
+      {
+        "address": "focuscontable@gmail.com",
+        "name": ""
+      }
+    ],
+    "html": "<span class=\"mp_address_group\"><a href=\"mailto:focuscontable@gmail.com\" class=\"mp_address_email\">focuscontable@gmail.com</a></span>",
+    "text": "focuscontable@gmail.com"
+  },
+  "html": false
+}

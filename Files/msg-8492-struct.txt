@@ -1,0 +1,73 @@
+[
+  {
+    "type": "mixed",
+    "params": {
+      "boundary": "----=_NextPart_000_0000_01D45270.9FAA2610"
+    },
+    "disposition": null,
+    "language": null
+  },
+  [
+    {
+      "partID": "1",
+      "type": "text",
+      "subtype": "plain",
+      "params": {
+        "charset": "us-ascii"
+      },
+      "id": null,
+      "description": null,
+      "encoding": "7BIT",
+      "size": 389,
+      "lines": 8,
+      "md5": null,
+      "disposition": null,
+      "language": null
+    }
+  ],
+  [
+    {
+      "partID": "2",
+      "type": "application",
+      "subtype": "pdf",
+      "params": {
+        "name": "Factura_FV_980001380 .PDF"
+      },
+      "id": null,
+      "description": null,
+      "encoding": "BASE64",
+      "size": 28930,
+      "md5": null,
+      "disposition": {
+        "type": "ATTACHMENT",
+        "params": {
+          "filename": "Factura_FV_980001380 .PDF"
+        }
+      },
+      "language": null
+    }
+  ],
+  [
+    {
+      "partID": "3",
+      "type": "text",
+      "subtype": "xml",
+      "params": {
+        "name": "face_F0900547176003a69a264.xml"
+      },
+      "id": null,
+      "description": null,
+      "encoding": "QUOTED-PRINTABLE",
+      "size": 18792,
+      "lines": 376,
+      "md5": null,
+      "disposition": {
+        "type": "ATTACHMENT",
+        "params": {
+          "filename": "face_F0900547176003a69a264.xml"
+        }
+      },
+      "language": null
+    }
+  ]
+]
