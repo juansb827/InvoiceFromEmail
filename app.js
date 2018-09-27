@@ -6,6 +6,9 @@ const inspect = require('util').inspect;
 var fs = require('fs'), fileStream;
 var utf8 = require('utf8');
 var quotedPrintable = require('quoted-printable');
+
+
+
 // Creating IMAP instance with configuration
 const imap = new Imap({
     user: 'juansb827@gmail.com',
@@ -14,100 +17,63 @@ const imap = new Imap({
     port: 993,
     tls: true
 });
+Bluebird.promisifyAll(imap);
 
-function openInbox(cb) {
-    imap.openBox('INBOX', true, cb);
+
+
+let downloadableEmail = {
+    info: {
+
+    },
+    attachments: []
 }
+const messagesToProcessQueue = [];
 
-imap.once('ready', function () {
-    openInbox(function (err, box) {
-        if (err) throw err;
-        imap.search(['ALL', ['SINCE', 'September 20, 2018'], ['FROM', 'focuscontable']], function (err, results) {
-            if (err) throw err;
-            console.log("Results are" + results);
-
-            //var f = imap.fetch(results, { bodies: 'HEADER.FIELDS (TO FROM SUBJECT)' });
-            var f = imap.fetch(results, {
+let msgToProccessCount = 0;
+imap.once('ready', execute);
+function execute() {
+    imap.openBoxAsync('INBOX', true)
+        .then(box => {
+            return imap.searchAsync(['ALL', ['SINCE', 'September 20, 2018'], ['FROM', 'focuscontable']]);
+        })
+        .then(results => {
+            return checkIfProccessed(results);
+        })
+        .then(msgsToDownLoad => {
+            console.log("About to parse #", msgsToDownLoad.length);
+            msgToProccessCount = msgsToDownLoad.length;
+            imap.fetch(msgsToDownLoad, {
                 bodies: ['HEADER.FIELDS (FROM TO SUBJECT DATE)'], //HEADER.FIELDS (FROM TO SUBJECT DATE)','TEXT
                 struct: true
-            });
-
-            let messages = [];
-            f.on('message', function (msg, seqno) {
-                console.log('Message #%d', seqno);
-                var prefix = '(#' + seqno + ') ';
-                msg.on('body', function (stream, info) {
-                    console.log(prefix + 'Body');
-                    simpleParser(stream, (err, parsed) => {
-
-                        fs.writeFile('Files/' + 'msg-' + seqno + '-metadata.txt', JSON.stringify(parsed, null, 2), function (err) {
-                            if (err) {
-                                return console.log(err);
+            })
+                .on('message', (msg, sequenceNumber) => {
+                    parseMessage(msg, sequenceNumber)
+                        .then(parsedMessage => {
+                            messagesToProcessQueue.push(parsedMessage);
+                            msgToProccessCount--;
+                            if(msgToProccessCount === 0){
+                                console.log("Finished Parsing all messages");
+                                console.log("QueueSize", messagesToProcessQueue.length);
                             }
-
-                            console.log("The file was saved!");
-                        });
-                    });
-                    //stream.pipe();
-
+                            
+                        })
+                })
+                .once('error', function (err) {
+                    console.log('Error fetching messages: ' + err);
+                })
+                .once('end', function () {
+                    console.log('Done fetching all messages !' + msgsToDownLoad);
+                    imap.end();
                 });
-
-                msg.once('attributes', function (attrs) {
-                    //console.log(prefix + 'Attributes: %s', inspect(attrs, false, 8));
-
-                    fs.writeFile('Files/' + 'msg-' + seqno + '-struct.txt', JSON.stringify(attrs.struct, null, 2), function (err) {
-                        if (err) {
-                            return console.log(err);
-                        }
-
-                        console.log("The file was saved!");
-                    });
-
-                    var attachmentsParts = findAttachmentParts(attrs.struct);
-                    attachmentsParts.forEach((part) => {
-                        const name = part.params.name;
-                        if (name && name.length > 4
-                            && name.slice(-4).toUpperCase() === ".XML") {
-                            console.log("Download", name);
-
-                            imap.fetch(attrs.uid, { //do not use imap.seq.fetch here
-                                bodies: [part.partID],
-                                struct: true
-                            })
-                                .on('message', buildAttMessageFunction(part));
-
-                        }
-
-                    });
-                    console.log(prefix + 'Has attachments: %d', attachmentsParts.length);
+        })
+}
 
 
-                });
-
-
-                msg.once('end', function () {
-                    console.log(prefix + 'Finished');
-                });
-
-
-
-
-
-
-
-            });
-            f.once('error', function (err) {
-                console.log('Fetch error: ' + err);
-            });
-            f.once('end', function () {
-                console.log('Done fetching all messages!');
-                imap.end();
-            });
-        });
-
+function checkIfProccessed(msgsToDownLoad) {
+    return new Bluebird((resolve, reject) => {
+        resolve(msgsToDownLoad)
     });
-});
-
+}
 
 imap.once('error', function (err) {
     console.log(err);
@@ -119,7 +85,89 @@ imap.once('end', function () {
 
 imap.connect();
 
+function parseMessage(msg, seqno) {
+    return new Bluebird((resolve, reject) => {
+        console.log('Message #%d', seqno);
+        var prefix = '(#' + seqno + ') ';
+        var message = {
+            //info
+            //attachments          
+        };
 
+
+        msg.on('body', function (stream, info) {
+
+            simpleParser(stream, (err, parsed) => {
+                const info = {
+                    to: parsed.to.text,
+                    from: parsed.from.text,
+                    date: parsed.data,
+                    subject: parsed.subject
+                }
+                message.info = info;
+
+
+
+
+                fs.writeFile('Files/' + 'msg-' + seqno + '-metadata.txt', JSON.stringify(parsed, null, 2), function (err) {
+                    if (err) {
+                        return console.log(err);
+                    }
+                    console.log("The file was saved!");
+                });
+            });
+
+        });
+
+        msg.once('attributes', function (attrs) {
+            message.uid = attrs.uid;
+            //console.log(prefix + 'Attributes: %s', inspect(attrs, false, 8));
+            fs.writeFile('Files/' + 'msg-' + seqno + '-struct.txt', JSON.stringify(attrs.struct, null, 2), function (err) {
+                if (err) {
+                    return console.log(err);
+                }
+                console.log("The file was saved!");
+            });
+
+            message.attachments = findAttachmentParts(attrs.struct);
+
+        });
+
+
+        msg.once('end', function () {
+            console.log(prefix + 'Finished');
+            resolve(message);
+        });
+
+
+    });
+
+
+
+
+
+
+
+
+
+
+
+}
+
+function downloadAttachment(uid, part) {
+    const name = part.params.name;
+    if (name && name.length > 4
+        && name.slice(-4).toUpperCase() === ".XML") {
+        console.log("Download", name);
+
+        imap.fetch(uid, { //do not use imap.seq.fetch here
+            bodies: [part.partID],
+            struct: true
+        })
+            .on('message', buildAttMessageFunction(part));
+
+    }
+}
 
 function findAttachmentParts(struct, attachments) {
     attachments = attachments || [];
@@ -151,6 +199,7 @@ function buildAttMessageFunction(attachment) {
             console.log(prefix + 'Streaming this attachment to file', filename, info);
             var writeStream = fs.createWriteStream(filename);
             writeStream.on('finish', function () {
+                console.timeEnd("dbsave");
                 console.log(prefix + 'Done writing to file %s', filename);
             });
 
@@ -159,29 +208,15 @@ function buildAttMessageFunction(attachment) {
             if (toUpper(encoding) === 'BASE64') {
                 //the stream is base64 encoded, so here the stream is decode on the fly and piped to the write stream (file)
                 stream.pipe(base64.decode()).pipe(writeStream);
-            } else {
+            } else if (toUpper(encoding) === 'QUOTED-PRINTABLE') {
                 //here we have none or some other decoding streamed directly to the file which renders it useless probably
-                
-                    //var lel = utf8.decode(quotedPrintable.decode(stream));
-                    var buffer = "";
-                    stream.on('data', function(chunk){
-                        buffer += chunk;
-                    })
-                    stream.on('end', function(){
-                        console.log("Done buffering");
-                        var buffer2 = utf8.decode(quotedPrintable.decode(buffer));
-                        console.log("Done conver");
-                        fs.writeFile('Files/' + 'msg-' + seqno + '-mel.xml', buffer2, function (err) {
-                            if (err) {
-                                return console.log(err);
-                            }
-    
-                            console.log("The file was saved!");
-                        });
-                    })
-                    //stream.pipe(writeStream);
-                   
-                
+                console.time("dbsave");
+
+                stream.pipe(json).pipe(writeStream);
+
+
+            } else {
+                console.log("UNKOWN ENCODING");
             }
         });
         msg.once('end', function () {
@@ -192,3 +227,5 @@ function buildAttMessageFunction(attachment) {
 
 
 
+var JSONEncodeStream = require('./encode');
+var json = JSONEncodeStream();

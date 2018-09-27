@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?><fe:Invoice xmlns:fe="http://www.dian.gov.co/contratos/facturaelectronica/v1" xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2" xmlns:clm54217="urn:un:unece:uncefact:codelist:specification:54217:2001" xmlns:clm66411="urn:un:unece:uncefact:codelist:specification:66411:2001" xmlns:clmIANAMIMEMediaType="urn:un:unece:uncefact:codelist:specification:IANAMIMEMediaType:2003" xmlns:ext="urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2" xmlns:qdt="urn:oasis:names:specification:ubl:schema:xsd:QualifiedDatatypes-2" xmlns:sts="http://www.dian.gov.co/contratos/facturaelectronica/v1/Structures" xmlns:udt="urn:un:unece:uncefact:data:specification:UnqualifiedDataTypesSchemaModule:2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.dian.gov.co/contratos/facturaelectronica/v1 ../xsd/DIAN_UBL.xsd urn:un:unece:uncefact:data:specification:UnqualifiedDataTypesSchemaModule:2 ../../ubl2/common/UnqualifiedDataTypeSchemaModule-2.0.xsd urn:oasis:names:specification:ubl:schema:xsd:QualifiedDatatypes-2 ../../ubl2/common/UBL-QualifiedDatatypes-2.0.xsd">
+	<ext:UBLExtensions>
+		<ext:UBLExtension>
+			<ext:ExtensionContent>
+				<sts:DianExtensions>
+					<sts:InvoiceControl>
+						<sts:InvoiceAuthorization>9000000108965086</sts:InvoiceAuthorization>
+						<sts:AuthorizationPeriod>
+							<cbc:StartDate>2018-06-12</cbc:StartDate>
+							<cbc:EndDate>2028-06-12</cbc:EndDate>
+						</sts:AuthorizationPeriod>
+						<sts:AuthorizedInvoices>
+							<sts:Prefix>PRUE</sts:Prefix>
+							<sts:From>980000000</sts:From>
+							<sts:To>985000000</sts:To>
+						</sts:AuthorizedInvoices>
+					</sts:InvoiceControl>
+					<sts:InvoiceSource>
+						<cbc:IdentificationCode listAgencyID="6" listAgencyName="United Nations Economic Commission for Europe" listSchemeURI="urn:oasis:names:specification:ubl:codelist:gc:CountryIdentificationCode-2.0">CO</cbc:IdentificationCode>
+					</sts:InvoiceSource>
+					<sts:SoftwareProvider>
+						<sts:ProviderID schemeAgencyID="195" schemeAgencyName="CO, DIAN (Direccion de Impuestos y Aduanas Nacionales)">900547176</sts:ProviderID>
+						<sts:SoftwareID schemeAgencyID="195" schemeAgencyName="CO, DIAN (Direccion de Impuestos y Aduanas Nacionales)">36a1a75d-91d4-4ade-bd89-ad294b3318b5</sts:SoftwareID>
+					</sts:SoftwareProvider>
+					<sts:SoftwareSecurityCode schemeAgencyID="195" schemeAgencyName="CO, DIAN (Direccion de Impuestos y Aduanas Nacionales)">de0ca158b7cb1baab11a8cca72e0e2965ac8edee605dfe2c985a22add7b3629000104e0ea63c1156968934f674fe326d</sts:SoftwareSecurityCode>
+				</sts:DianExtensions>
+			</ext:ExtensionContent>
+		</ext:UBLExtension>
+		<ext:UBLExtension>
+			<ext:ExtensionContent><ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#" Id="xmldsig-1521ff78-c9b6-4084-bbae-1bf908fbf29e">
+<ds:SignedInfo>
+<ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+<ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>
+<ds:Reference Id="xmldsig-1521ff78-c9b6-4084-bbae-1bf908fbf29e-ref0" URI="">
+<ds:Transforms>
+<ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+</ds:Transforms>
+<ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+<ds:DigestValue>gQBYLuDr1TPO9IeC4I7+sBMOpxIhySU9U2+lEjzrbWs=</ds:DigestValue>
+</ds:Reference>
+<ds:Reference Type="http://uri.etsi.org/01903#SignedProperties" URI="#xmldsig-1521ff78-c9b6-4084-bbae-1bf908fbf29e-signedprops">
+<ds:Transforms>
+<ds:Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+</ds:Transforms>
+<ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+<ds:DigestValue>jGeal65K2aMwQw+M8Izbl1M7rajSLBY8Gupo6GPX7nk=</ds:DigestValue>
+</ds:Reference>
+</ds:SignedInfo>
+<ds:SignatureValue Id="xmldsig-1521ff78-c9b6-4084-bbae-1bf908fbf29e-sigvalue">
+dceCyTXay3JOFg04XX1sq45B7lxdO2K2rkyua3gzFuDsche5V44HIEHTP3V5IyK7wWQlLV4w6oBk&#13;
++rG9dMi+BPPFYEKybs+cSOJVU54lgpScoabVIWLTywnE+G74d0T/zxF0UH3VuQ2k94RyemrelrBd&#13;
+O/OlSZZHCFCDy0Hr9xzgBh9CoDBh2wjk4Yq8Sw2taKSLY0ghnoljjdhcvlg6zGQoET9TpuhW2550&#13;
+NmQSOQ93LmGF+ZzUHVIkXUs5SuxumxIF5/kwNug4BpKoHrWcD/Fp8DLtsWy1pUTXjhtL/ZexYxzi&#13;
+vNbeukbZLdqQTDAZatgJ2OZascR69oqqBslsLw==
+</ds:SignatureValue>
+<ds:KeyInfo>
+<ds:X509Data>
+<ds:X509Certificate>
+MIIIMTCCBhmgAwIBAgIIblRQB9ErxjUwDQYJKoZIhvcNAQELBQAwgbQxIzAhBgkqhkiG9w0BCQEW&#13;
+FGluZm9AYW5kZXNzY2QuY29tLmNvMSMwIQYDVQQDExpDQSBBTkRFUyBTQ0QgUy5BLiBDbGFzZSBJ&#13;
+STEwMC4GA1UECxMnRGl2aXNpb24gZGUgY2VydGlmaWNhY2lvbiBlbnRpZGFkIGZpbmFsMRMwEQYD&#13;
+VQQKEwpBbmRlcyBTQ0QuMRQwEgYDVQQHEwtCb2dvdGEgRC5DLjELMAkGA1UEBhMCQ08wHhcNMTgw&#13;
+OTA2MTg1MDAwWhcNMTkwOTA2MTg0OTAwWjCB/DEaMBgGA1UECRMRQ1JBIDc0QSBOTyA1MkIgNTIx&#13;
+IzAhBgkqhkiG9w0BCQEWFFJPRFJJQkVaVUxAR01BSUwuQ09NMScwJQYDVQQDEx5GT0NVUyBTT0ZU&#13;
+V0FSRSBTT0xVVElPTlMgUy5BLlMxEzARBgNVBAUTCjkwMDU0NzE3NjAxGTAXBgNVBAwTEFBFUlNP&#13;
+TkEgSlVSSURJQ0ExKzApBgNVBAsTIkVtaXRpZG8gcG9yIEFuZGVzIFNDRCBDcmEgMjcgODYgNDMx&#13;
+DzANBgNVBAcTBkJPR09UQTEVMBMGA1UECBMMQ1VORElOQU1BUkNBMQswCQYDVQQGEwJDTzCCASIw&#13;
+DQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBANZI4FrYpXDqOaSsTcXTWqvZJwb7zHZVRevc3cfy&#13;
+ptytUmWc/wx8xRvUnTm4R/Bx4M8iBWEfFKyh9cKxiGrjB41Ngs9kH63oefGw+NY9h8oH7XYsdToT&#13;
+JL30+N2Q2ISMpGp2y2GXG6dQcQsoKI8P/tAbULxboMYRSWNhLcuRSgEAX1SFNMQb/aCG8yWxeEyw&#13;
+O/NzrOCWJvjV9zsvgZ+TJgjh/8hFQjnjlXN9iCN2zjqvZ3K9xj+kktrkZkLk9a7QY4t2Ue53Fwdw&#13;
+H3GvVKunMD8ojJzX5M4XYBdUZWOO2K1RJDlmzveFsox07r6VxTDHERDSjl492ElZNizQPPJq918C&#13;
+AwEAAaOCAvswggL3MAwGA1UdEwEB/wQCMAAwHwYDVR0jBBgwFoAUqEu09AuntlvUoCiFEJ0EEzPE&#13;
+p/cwNwYIKwYBBQUHAQEEKzApMCcGCCsGAQUFBzABhhtodHRwOi8vb2NzcC5hbmRlc3NjZC5jb20u&#13;
+Y28wHwYDVR0RBBgwFoEUUk9EUklCRVpVTEBHTUFJTC5DT00wggHjBgNVHSAEggHaMIIB1jCCAdIG&#13;
+DSsGAQQBgfRIAQIJAggwggG/MEEGCCsGAQUFBwIBFjVodHRwOi8vd3d3LmFuZGVzc2NkLmNvbS5j&#13;
+by9kb2NzL0RQQ19BbmRlc1NDRF9WMi45LnBkZjCCAXgGCCsGAQUFBwICMIIBah6CAWYATABhACAA&#13;
+dQB0AGkAbABpAHoAYQBjAGkA8wBuACAAZABlACAAZQBzAHQAZQAgAGMAZQByAHQAaQBmAGkAYwBh&#13;
+AGQAbwAgAGUAcwB0AOEAIABzAHUAagBlAHQAYQAgAGEAIABsAGEAcwAgAFAAbwBsAO0AdABpAGMA&#13;
+YQBzACAAZABlACAAQwBlAHIAdABpAGYAaQBjAGEAZABvACAAZABlACAAUABlAHIAcwBvAG4AYQAg&#13;
+AEoAdQByAO0AZABpAGMAYQAgACgAUABDACkAIAB5ACAARABlAGMAbABhAHIAYQBjAGkA8wBuACAA&#13;
+ZABlACAAUAByAOEAYwB0AGkAYwBhAHMAIABkAGUAIABDAGUAcgB0AGkAZgBpAGMAYQBjAGkA8wBu&#13;
+ACAAKABEAFAAQwApACAAZQBzAHQAYQBiAGwAZQBjAGkAZABhAHMAIABwAG8AcgAgAEEAbgBkAGUA&#13;
+cwAgAFMAQwBEMB0GA1UdJQQWMBQGCCsGAQUFBwMCBggrBgEFBQcDBDA3BgNVHR8EMDAuMCygKqAo&#13;
+hiZodHRwOi8vY3JsLmFuZGVzc2NkLmNvbS5jby9DbGFzZUlJLmNybDAdBgNVHQ4EFgQUpvFicb7N&#13;
+NbEAugGQgg31aKLg/MMwDgYDVR0PAQH/BAQDAgTwMA0GCSqGSIb3DQEBCwUAA4ICAQAL18T55yHt&#13;
+1tVy5JDdhNuw1dO+5cNfmoat/F6FUV0VZ7wzogmWQtpwUZNR3CYzviKuiQkoThhpijQA8hqBlxkw&#13;
+2dhSGbo7JRuEr419Gkt8z6s7F6uArcDCuA7RELVlr5tv0S58Rj0thVz03OcIQr1Xb0l0iJ3BIbRJ&#13;
+Xxon7BH76n8ZVU8BCBrs4VTsjsPj+AUgV44nzMKkrgt4o2Uv5vBPulTsFVzUhPntsT2D8+RDcH1C&#13;
+JsBsyvLi3lRtXANKANUtNS8DshMbzTdmGOQV5xIaGZ+gK/z4Wd3qczAqpIXB9mbnyvNxvWzHsbWc&#13;
+yd8ILg9vhLRyg/UoVA2/d2bZg4e5s5EFt/HDNMkEp52AxfuBNLkmjYxULFyAjW+rrvZPm4fTX+iZ&#13;
+GIbWcKOn3/AOERX7v+5Mu5QmLIAtLPq0ffgMzu4heUf0HpFIZHFlxvZhxegcOzZsKFwi5wehf/Lz&#13;
+lJRYFZHV/O6JY7E2ACJQ7YyEB5157Y4alunG3WrocNhYKGjxQjAUenjbSrod9l1MlEw1GJfqTDQ3&#13;
+HBhVNnL+svEHR7ZtYwmWTaQkgm59TU//qN6qJm79fNrIB7ETi24yICFPevuNzVP/uyRKJZHpkgO3&#13;
+FQ+FcsRKeVpnJ3vSZCPdvgmy9XFacNPNleFWu8cOLhJX9SGDp3kpuTskuaSEEFH0zw==
+</ds:X509Certificate>
+<ds:X509SubjectName>c=CO,st=CUNDINAMARCA,l=BOGOTA,ou=Emitido por Andes SCD Cra 27 86 43,title=PERSONA JURIDICA,serialNumber=9005471760,cn=FOCUS SOFTWARE SOLUTIONS S.A.S,1.2.840.113549.1.9.1=RODRIBEZUL@GMAIL.COM,street=CRA 74A NO 52B 52</ds:X509SubjectName>
+<ds:X509IssuerSerial>
+<ds:X509IssuerName>c=CO,l=Bogota D.C.,o=Andes SCD.,ou=Division de certificacion entidad final,cn=CA ANDES SCD S.A. Clase II,1.2.840.113549.1.9.1=info@andesscd.com.co</ds:X509IssuerName>
+<ds:X509SerialNumber>7950067236720068149</ds:X509SerialNumber>
+</ds:X509IssuerSerial>
+</ds:X509Data>
+</ds:KeyInfo>
+<ds:Object><xades:QualifyingProperties xmlns:xades="http://uri.etsi.org/01903/v1.3.2#" xmlns:xades141="http://uri.etsi.org/01903/v1.4.1#" Target="#xmldsig-1521ff78-c9b6-4084-bbae-1bf908fbf29e"><xades:SignedProperties Id="xmldsig-1521ff78-c9b6-4084-bbae-1bf908fbf29e-signedprops"><xades:SignedSignatureProperties><xades:SigningTime>2018-09-22T12:34:23.492-05:00</xades:SigningTime><xades:SigningCertificate><xades:Cert><xades:CertDigest><ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><ds:DigestValue>WMblNyq10PvkvYpWqKzUnrQgrzKE+c9jiuQfZ0EC3po=</ds:DigestValue></xades:CertDigest><xades:IssuerSerial><ds:X509IssuerName>c=CO,l=Bogota D.C.,o=Andes SCD.,ou=Division de certificacion entidad final,cn=CA ANDES SCD S.A. Clase II,1.2.840.113549.1.9.1=info@andesscd.com.co</ds:X509IssuerName><ds:X509SerialNumber>7950067236720068149</ds:X509SerialNumber></xades:IssuerSerial></xades:Cert><xades:Cert><xades:CertDigest><ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><ds:DigestValue>oEsyOEeUGTXr45Jr0jHJx3l/9CxcsxPMOTarEiXOclY=</ds:DigestValue></xades:CertDigest><xades:IssuerSerial><ds:X509IssuerName>c=CO,l=Bogota D.C.,o=Andes SCD,ou=Division de certificacion,cn=ROOT CA ANDES SCD S.A.,1.2.840.113549.1.9.1=info@andesscd.com.co</ds:X509IssuerName><ds:X509SerialNumber>8136867327090815624</ds:X509SerialNumber></xades:IssuerSerial></xades:Cert><xades:Cert><xades:CertDigest><ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><ds:DigestValue>Cs7emRwtXWVYHJrqS9eXEXfUcFyJJBqFhDFOetHu8ts=</ds:DigestValue></xades:CertDigest><xades:IssuerSerial><ds:X509IssuerName>c=CO,l=Bogota D.C.,o=Andes SCD,ou=Division de certificacion,cn=ROOT CA ANDES SCD S.A.,1.2.840.113549.1.9.1=info@andesscd.com.co</ds:X509IssuerName><ds:X509SerialNumber>3184328748892787122</ds:X509SerialNumber></xades:IssuerSerial></xades:Cert></xades:SigningCertificate><xades:SignaturePolicyIdentifier><xades:SignaturePolicyId><xades:SigPolicyId><xades:Identifier>https://facturaelectronica.dian.gov.co/politicadefirma/v2/politicadefirmav2.pdf</xades:Identifier><xades:Description>Política de firma para facturas electrónicas de la República de Colombia</xades:Description></xades:SigPolicyId><xades:SigPolicyHash><ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><ds:DigestValue>dMoMvtcG5aIzgYo0tIsSQeVJBDnUnfSOfBpxXrmor0Y=</ds:DigestValue></xades:SigPolicyHash></xades:SignaturePolicyId></xades:SignaturePolicyIdentifier><xades:SignerRole><xades:ClaimedRoles><xades:ClaimedRole>supplier</xades:ClaimedRole></xades:ClaimedRoles></xades:SignerRole></xades:SignedSignatureProperties></xades:SignedProperties></xades:QualifyingProperties></ds:Object>
+</ds:Signature></ext:ExtensionContent>
+		</ext:UBLExtension>
+	</ext:UBLExtensions>
+	<cbc:UBLVersionID>UBL 2.0</cbc:UBLVersionID>
+	<cbc:ProfileID>DIAN 1.0</cbc:ProfileID>
+	<cbc:ID>PRUE980001380</cbc:ID>
+	<cbc:UUID schemeAgencyID="195" schemeAgencyName="CO, DIAN (Direccion de Impuestos y Aduanas Nacionales)">ecaeea4bd4a56b1ad3f2f6635599c483527f1c37</cbc:UUID>
+	<cbc:IssueDate>2018-09-19</cbc:IssueDate>
+	<cbc:IssueTime>19:20:03</cbc:IssueTime>
+	<cbc:InvoiceTypeCode listAgencyID="195" listAgencyName="CO, DIAN (Direccion de Impuestos y Aduanas Nacionales)" listSchemeURI="http://www.dian.gov.co/contratos/facturaelectronica/v1/InvoiceType">1</cbc:InvoiceTypeCode>
+	<cbc:Note>Formas de Pago 
+ CARTERA  $35,700,000 Cuotas 1</cbc:Note>
+	<cbc:DocumentCurrencyCode>COP</cbc:DocumentCurrencyCode>
+	<cac:InvoicePeriod>
+	<cbc:DurationMeasure unitCode="DAY">65</cbc:DurationMeasure>
+	<cbc:Description languageID="es-CO">El elemento /fe:Invoice/cac:InvoicePeriod/cbc:DurationMeasure contiene el lapso para el pago de la factura electrónica emitida</cbc:Description>
+	</cac:InvoicePeriod>
+	<fe:AccountingSupplierParty>
+		<cbc:AdditionalAccountID>1</cbc:AdditionalAccountID>
+		<fe:Party>
+			<cac:PartyIdentification>
+				<cbc:ID schemeAgencyID="195" schemeAgencyName="CO, DIAN (Direccion de Impuestos y Aduanas Nacionales)" schemeID="31">900547176</cbc:ID>
+			</cac:PartyIdentification>
+			<cac:PartyName>
+				<cbc:Name>FOCUS SOFTWARE SOLUTIONS S.A.S</cbc:Name>
+			</cac:PartyName>
+			<fe:PhysicalLocation>
+				<fe:Address>
+					<cbc:InhouseMail>info@hjesolutionces.com</cbc:InhouseMail>
+					<cbc:Department>D.C</cbc:Department>
+					<cbc:CitySubdivisionName>NORMANDIA</cbc:CitySubdivisionName>
+					<cbc:CityName>BOGOTA-D.C</cbc:CityName>
+					<cbc:PostalZone>111071</cbc:PostalZone>
+					<cac:AddressLine>
+						<cbc:Line>CRA 15 No 73 - 57 Of 208</cbc:Line>
+					</cac:AddressLine>
+					<cac:Country>
+						<cbc:IdentificationCode>CO</cbc:IdentificationCode>
+					</cac:Country>
+				</fe:Address>
+			</fe:PhysicalLocation>
+			<fe:PartyTaxScheme>
+				<cbc:TaxLevelCode>2</cbc:TaxLevelCode>
+				<cac:TaxScheme/>
+			</fe:PartyTaxScheme>
+			<fe:PartyLegalEntity>
+				<cbc:RegistrationName>FOCUS SOFTWARE SOLUTIONS S.A.S</cbc:RegistrationName>
+			</fe:PartyLegalEntity>
+				<fe:Person>
+				<cbc:FirstName/>
+				<cbc:FamilyName/>
+				<cbc:MiddleName/>
+				</fe:Person>
+		</fe:Party>
+	</fe:AccountingSupplierParty>
+	<fe:AccountingCustomerParty>
+		<cbc:AdditionalAccountID>1</cbc:AdditionalAccountID>
+		<fe:Party>
+			<cac:PartyIdentification>
+				<cbc:ID schemeAgencyID="195" schemeAgencyName="CO, DIAN (Direccion de Impuestos y Aduanas Nacionales)" schemeID="31">900023792</cbc:ID>
+			</cac:PartyIdentification>
+			<cac:PartyName>
+				<cbc:Name>TRANSPORTUARIA S.A.S</cbc:Name>
+			</cac:PartyName>
+			<fe:PhysicalLocation>
+				<fe:Address>
+					<cbc:InhouseMail>jjaramillo@transportuaria.com</cbc:InhouseMail>
+					<cbc:Department>D.C</cbc:Department>
+					<cbc:CitySubdivisionName>CHICO</cbc:CitySubdivisionName>
+					<cbc:CityName>BOGOTA-D.C</cbc:CityName>
+					<cac:AddressLine>
+						<cbc:Line>CRA 11A-NO 94-76 OF 304</cbc:Line>
+					</cac:AddressLine>
+					<cac:Country>
+						<cbc:IdentificationCode>CO</cbc:IdentificationCode>
+					</cac:Country>
+				</fe:Address>
+			</fe:PhysicalLocation>
+			<fe:PartyTaxScheme>
+				<cbc:TaxLevelCode>2</cbc:TaxLevelCode>
+				<cac:TaxScheme/>
+			</fe:PartyTaxScheme>
+			<fe:PartyLegalEntity>
+				<cbc:RegistrationName>TRANSPORTUARIA S.A.S</cbc:RegistrationName>
+			</fe:PartyLegalEntity>
+			<cac:Contact>
+				<cbc:Name>TRANSPORTUARIA S.A.S</cbc:Name>
+				<cbc:Telephone>571-6162021</cbc:Telephone>
+				<cbc:ElectronicMail>jjaramillo@transportuaria.com</cbc:ElectronicMail>
+			</cac:Contact>
+			<fe:Person>
+				<cbc:FirstName/>
+				<cbc:FamilyName/>
+				<cbc:MiddleName/>
+				
+			</fe:Person>
+		</fe:Party>
+	</fe:AccountingCustomerParty>
+	
+	<cac:PaymentExchangeRate>
+		<cbc:SourceCurrencyCode>USD</cbc:SourceCurrencyCode>
+		<cbc:SourceCurrencyBaseRate>3007.03</cbc:SourceCurrencyBaseRate>          <!--valor mínimo negociado o pactado para el negocio-->
+		<cbc:TargetCurrencyCode>COP</cbc:TargetCurrencyCode>
+		<cbc:TargetCurrencyBaseRate>1</cbc:TargetCurrencyBaseRate>
+		<cbc:CalculationRate>3007.03</cbc:CalculationRate> <!--tasa de cambio del día de emisión o expedición de la factura-->
+    </cac:PaymentExchangeRate>
+
+	<fe:TaxTotal>
+		<cbc:TaxAmount currencyID="COP">5706333.00</cbc:TaxAmount>
+		<cbc:TaxEvidenceIndicator>false</cbc:TaxEvidenceIndicator>
+		<fe:TaxSubtotal>
+			<cbc:TaxableAmount currencyID="COP">30033330.00</cbc:TaxableAmount>
+			<cbc:TaxAmount currencyID="COP">5706333.00</cbc:TaxAmount>
+			<cbc:Percent>19.00</cbc:Percent>
+			<cac:TaxCategory>
+				<cac:TaxScheme>
+					<cbc:ID>01</cbc:ID>
+				</cac:TaxScheme>
+			</cac:TaxCategory>
+		</fe:TaxSubtotal>
+	</fe:TaxTotal>
+	<fe:TaxTotal>
+		<cbc:TaxAmount currencyID="COP">0.00</cbc:TaxAmount>
+		<cbc:TaxEvidenceIndicator>false</cbc:TaxEvidenceIndicator>
+		<fe:TaxSubtotal>
+			<cbc:TaxableAmount currencyID="COP">0.00</cbc:TaxableAmount>
+			<cbc:TaxAmount currencyID="COP">0.00</cbc:TaxAmount>
+			<cbc:Percent>0.00</cbc:Percent>
+			<cac:TaxCategory>
+				<cac:TaxScheme>
+					<cbc:ID>02</cbc:ID>
+				</cac:TaxScheme>
+			</cac:TaxCategory>
+		</fe:TaxSubtotal>
+	</fe:TaxTotal>
+	<fe:TaxTotal>
+		<cbc:TaxAmount currencyID="COP">2402666.00</cbc:TaxAmount>
+		<cbc:TaxEvidenceIndicator>false</cbc:TaxEvidenceIndicator>
+		<fe:TaxSubtotal>
+			<cbc:TaxableAmount currencyID="COP">30033330.00</cbc:TaxableAmount>
+			<cbc:TaxAmount currencyID="COP">2402666.00</cbc:TaxAmount>
+			<cbc:Percent>8.00</cbc:Percent>
+			<cac:TaxCategory>
+				<cac:TaxScheme>
+					<cbc:ID>03</cbc:ID>
+				</cac:TaxScheme>
+			</cac:TaxCategory>
+		</fe:TaxSubtotal>
+	</fe:TaxTotal>		
+	<fe:LegalMonetaryTotal>
+		<cbc:LineExtensionAmount currencyID="COP">30000000.00</cbc:LineExtensionAmount>
+		<cbc:TaxExclusiveAmount currencyID="COP">30033330.00</cbc:TaxExclusiveAmount>
+		<cbc:AllowanceTotalAmount currencyID="COP">55650.00</cbc:AllowanceTotalAmount>
+		<cbc:ChargeTotalAmount currencyID="COP">88980.00</cbc:ChargeTotalAmount>
+		<cbc:PayableAmount currencyID="COP">38142329.00</cbc:PayableAmount>
+	</fe:LegalMonetaryTotal>
+
+        	<fe:InvoiceLine>
+		<cbc:ID>1</cbc:ID>
+		<cbc:InvoicedQuantity>5.00</cbc:InvoicedQuantity>
+		<cbc:LineExtensionAmount currencyID="COP">6000000.00</cbc:LineExtensionAmount>
+		<cac:AllowanceCharge>
+			<cbc:ChargeIndicator>false</cbc:ChargeIndicator>
+			<cbc:Amount currencyID="COP">55650.00</cbc:Amount>
+		</cac:AllowanceCharge>
+		<fe:Item>
+			<cbc:Description>VENTA DE PROGRAMA CONTROL DE CODECOS NAVIEROS</cbc:Description>
+			<cac:ManufacturersItemIdentification>
+				<cbc:ID>KIT00004</cbc:ID>
+			</cac:ManufacturersItemIdentification>
+			<cac:AdditionalItemIdentification>
+				<cbc:ID schemeName="LINE_TAX_TOTAL">8108999.00</cbc:ID>
+			</cac:AdditionalItemIdentification>
+		</fe:Item>
+		<fe:Price>
+			<cbc:PriceAmount currencyID="COP">30000000.00</cbc:PriceAmount>
+		</fe:Price>
+	</fe:InvoiceLine>
+	
+</fe:Invoice>
