@@ -17,16 +17,15 @@ const imap = new Imap({
     port: 993,
     tls: true
 });
+
 Bluebird.promisifyAll(imap);
-
-
 
 let downloadableEmail = {
     info: {
-
     },
     attachments: []
 }
+
 const messagesToProcessQueue = [];
 
 let msgToProccessCount = 0;
