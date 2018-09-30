@@ -19,10 +19,10 @@ module.exports = (sequelize, DataTypes) => {
             foreignKey: 'mailId',
         });
 
-        Invoice.belongsTo(models.Invoice, {
+        Invoice.belongsTo(models.Company, {
             foreignKey: 'companyId',
         });
     };
 
-    return Mail;
+    return Invoice;
 };
