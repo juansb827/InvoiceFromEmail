@@ -4,7 +4,11 @@ module.exports = (sequelize, DataTypes) => {
         from: DataTypes.STRING,
         date: DataTypes.DATE,                
         subject: DataTypes.STRING,
-        proccessed: DataTypes.BOOLEAN        
+        proccessed: DataTypes.BOOLEAN, 
+        uid: {
+            type: DataTypes.STRING,
+            unique: true            
+          }        
     });
 
     Mail.associate = (models) => {
