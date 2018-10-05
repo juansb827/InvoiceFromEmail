@@ -10,7 +10,7 @@ const sequelize = new Sequelize(conStr,{
 const models = {
   InvoiceItem: sequelize.import('./InvoiceItem'),
   Invoice: sequelize.import('./Invoice'),
-  Email: sequelize.import('./Email'),  
+  Mail: sequelize.import('./Mail'),  
   User: sequelize.import('./User'),
   Company: sequelize.import('./Company') 
 };

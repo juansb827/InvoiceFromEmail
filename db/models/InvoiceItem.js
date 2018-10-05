@@ -1,6 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
 
-    const InvoiceItem = sequelize.define('invoiceItem', {
+    const InvoiceItem = sequelize.define('InvoiceItem', {
         name: DataTypes.STRING,
         quantity: DataTypes.INTEGER,                
         price: DataTypes.DECIMAL        
