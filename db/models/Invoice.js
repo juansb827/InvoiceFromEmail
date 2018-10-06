@@ -13,14 +13,15 @@ module.exports = (sequelize, DataTypes) => {
           
     });
 
-    Invoice.associate = (models) => {
-        //1:M
-        Invoice.belongsTo(models.Mail, {
-            foreignKey: 'mailId',
-        });
-
+    Invoice.associate = (models) => {        
+        //1:m
         Invoice.belongsTo(models.Company, {
             foreignKey: 'companyId',
+        });
+
+        //1:m
+        Invoice.belongsTo(models.Email, {
+            foreignKey: 'emailId',
         });
     };
 

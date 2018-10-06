@@ -1,9 +1,9 @@
 'use strict';
 
 module.exports = {
-  up: (queryInterface, Sequelize) => {
+  up: async (queryInterface, Sequelize) => {
 
-    return queryInterface.addColumn('Users', 'companyId', {
+    await queryInterface.addColumn('Users', 'companyId', {
       type: Sequelize.INTEGER,
       references: {
         model: 'Companies', // target Table
@@ -13,7 +13,8 @@ module.exports = {
       onDelete: 'SET NULL',
     });
 
-    return queryInterface.addColumn('Emails', 'companyId', {
+
+    await queryInterface.addColumn('Emails', 'companyId', {
       type: Sequelize.INTEGER,
       references: {
         model: 'Companies', // target Table
@@ -22,14 +23,68 @@ module.exports = {
       onUpdate: 'CASCADE',
       onDelete: 'SET NULL',
     });
+
+
+    await queryInterface.addColumn('Invoices', 'companyId', {
+      type: Sequelize.INTEGER,
+      references: {
+        model: 'Companies', // target Table
+        key: 'id', //
+      },
+      onUpdate: 'CASCADE',
+      onDelete: 'SET NULL',
+    });
+
+    await queryInterface.addColumn('Invoices', 'emailId', {
+      type: Sequelize.INTEGER,
+      references: {
+        model: 'Emails', // target Table
+        key: 'id', //
+      },
+      onUpdate: 'CASCADE',
+      onDelete: 'SET NULL',
+    });
+
+    await queryInterface.addColumn('InvoiceItems', 'invoiceId', {
+      type: Sequelize.INTEGER,
+      references: {
+        model: 'Invoices', // target Table
+        key: 'id', //
+      },
+      onUpdate: 'CASCADE',
+      onDelete: 'SET NULL',
+    });
+
 
 
   },
 
-  down: (queryInterface, Sequelize) => {
-    return queryInterface.removeColumn(
-      'Users', // name of Source model
-      'companyId' // key we want to remove
-    );
+  down: async (queryInterface, Sequelize) => {
+    await queryInterface.removeColumn(
+      'Users',
+      'companyId'
+    )
+
+    await queryInterface.removeColumn(
+      'Emails',
+      'companyId'
+    )
+
+    await queryInterface.removeColumn(
+      'Invoices',
+      'companyId'
+    )
+
+    await queryInterface.removeColumn(
+      'Invoices',
+      'emailId'
+    )
+
+    await queryInterface.removeColumn(
+      'InvoiceItems',
+      'invoiceId'
+    )
+
+
   }
 };
