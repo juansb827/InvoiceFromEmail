@@ -9,7 +9,8 @@ module.exports = (sequelize, DataTypes) => {
       uid: {
           type: DataTypes.STRING,
           unique: true            
-        }        
+        },
+     batchId: DataTypes.STRING         
   });
 
   

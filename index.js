@@ -8,7 +8,7 @@ const models = require('./db/models/index');
 
 
 
-models.connection.sync({force: true}).then(() => {
+models.connection.sync().then(() => {
     "DB synchronized";
 }); 
 
