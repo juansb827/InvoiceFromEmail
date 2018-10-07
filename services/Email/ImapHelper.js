@@ -5,22 +5,10 @@ const simpleParser = require('mailparser').simpleParser;
 const inspect = require('util').inspect;
 var fs = require('fs'), fileStream;
 var utf8 = require('utf8');
+
 var quotedPrintable = require('quoted-printable');
 
 
-var mailsService = require('./services/mails');
-
-
-// Creating IMAP instance with configuration
-const imap = new Imap({
-    user: 'juansb827@gmail.com',
-    password: 'EUPUNEANA12345',
-    host: 'imap.gmail.com',
-    port: 993,
-    tls: true
-});
-
-Promise.promisifyAll(imap);
 
 let downloadableEmail = {
     info: {
@@ -28,10 +16,46 @@ let downloadableEmail = {
     attachments: []
 }
 
+
+
+
 const messagesToProcessQueue = [];
 
 let msgToProccessCount = 0;
-imap.once('ready', async () => {
+
+/**
+ * 
+ * @param {*} imap - an Imap instance
+ */
+async function findEmailIds(imap) {   
+    const inbox = await imap.openBoxAsync('INBOX', true);
+    return imap.searchAsync(['ALL', ['SINCE', 'September 20, 2018'], ['FROM', 'focuscontable']]);        
+    
+}
+
+
+async function getConnection(imapConfiguration){
+    const imap = new Imap(imapConfiguration);
+    Promise.promisifyAll(imap);
+    await connectToEmailServer(imap);
+    return imap;
+}
+
+function connectToEmailServer(imap) {
+    return new Promise((resolve, reject) => {
+        imap.once('error', function (err) {
+            console.log("Error connecting to Inbox" + err);
+            reject(new Error("Error connecting to Inbox" + err));
+        });
+
+        imap.once('ready', () => {
+            resolve();
+        });
+        imap.connect();
+    });
+}
+
+ async function ds() {
     try {
         const msgsToDownLoad = await execute();
         console.log("Finally Resolved", msgsToDownLoad);
@@ -70,41 +94,19 @@ imap.once('ready', async () => {
                 })
         });
 
-        
+
 
     } catch (err) {
         console.log("Gotcha bitch", err);
     }
-});
-
-async function execute() {
-
-    const inbox = await imap.openBoxAsync('INBOX', true);
-    const mailIds = await imap.searchAsync(['ALL', ['SINCE', 'September 20, 2018'], ['FROM', 'focuscontable']]);
-
-    console.log('Found Emails :', mailIds);
-    if (mailIds.length === 0) {
-        return Promise.resolve([]);
-    }
-
-    const msgsToDownLoad = mailIds//await mailsService.bulkRegister(mailIds);
-    console.log("About to parse these mails:", msgsToDownLoad.length);
-    
-    return msgsToDownLoad;
-
 }
 
 
 
-imap.once('error', function (err) {
-    console.log(err);
-});
 
-imap.once('end', function () {
-    console.log('Connection ended');
-});
 
-imap.connect();
+
+
 
 async function parseMessage(msg, seqno) {
 
@@ -235,7 +237,10 @@ function buildAttMessageFunction(attachment) {
     };
 }
 
-
+module.exports = {
+    getConnection,
+    findEmailIds
+}
 
 var JSONEncodeStream = require('./encode');
 var json = JSONEncodeStream();
