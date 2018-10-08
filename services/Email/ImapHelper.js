@@ -2,6 +2,7 @@ const Promise = require('bluebird');
 const Imap = require('imap');
 const MailParser = require('mailparser').MailParser;
 const simpleParser = require('mailparser').simpleParser;
+const { EventEmitter } = require('events');
 const inspect = require('util').inspect;
 var fs = require('fs'), fileStream;
 var utf8 = require('utf8');
@@ -27,137 +28,139 @@ let msgToProccessCount = 0;
  * 
  * @param {*} imap - an Imap instance
  */
-async function findEmailIds(imap) {   
+async function findEmailIds(imap, startingDate, sender) {
     const inbox = await imap.openBoxAsync('INBOX', true);
-    return imap.searchAsync(['ALL', ['SINCE', 'September 20, 2018'], ['FROM', 'focuscontable']]);        
-    
+    //'September 20, 2018'
+    //'focuscontable'
+    return imap.searchAsync(['ALL', ['SINCE', startingDate ], ['FROM', sender]]);
+
 }
 
 
-async function getConnection(imapConfiguration){
+async function getConnection(imapConfiguration) {
+    const connection = await connectToEmailServer(imapConfiguration);
+    return connection;
+}
+
+function connectToEmailServer(imapConfiguration) {
     const imap = new Imap(imapConfiguration);
-    Promise.promisifyAll(imap);
-    await connectToEmailServer(imap);
-    return imap;
-}
 
-function connectToEmailServer(imap) {
     return new Promise((resolve, reject) => {
+        Promise.promisifyAll(imap);
+
         imap.once('error', function (err) {
-            console.log("Error connecting to Inbox" + err);
+            console.log("ImapHelper- connectToEmailServer", "Error creating connection " + imapConfiguration.user);
             reject(new Error("Error connecting to Inbox" + err));
         });
 
         imap.once('ready', () => {
-            resolve();
+            console.log("ImapHelper- connectToEmailServer", "Created connection " + imapConfiguration.user);
+            resolve(imap);
         });
+
+        imap.once('end', () => {
+            console.log("ImapHelper- connectToEmailServer", "Ended connection " + imapConfiguration.user);
+        });
+
         imap.connect();
     });
 }
 
- async function ds() {
-    try {
-        const msgsToDownLoad = await execute();
-        console.log("Finally Resolved", msgsToDownLoad);
-        //at this we should respond to the client, the rest of the processing is done by the queue 
-        let msgToAddCount = msgsToDownLoad.length;
-        const second = await new Promise((resolve, reject) => {
-            imap.fetch(msgsToDownLoad, {
-                bodies: ['HEADER.FIELDS (FROM TO SUBJECT DATE)'], //HEADER.FIELDS (FROM TO SUBJECT DATE)','TEXT
-                struct: true
-            })
-                .on('message', async (msg, sequenceNumber) => {
-                    try {
-                        const parsedMessage = await parseMessage(msg, sequenceNumber);
-                        messagesToProcessQueue.push(parsedMessage);
-                        msgToAddCount--;
-                        if (msgToAddCount === 0) {
-                            console.log("Finished Adding all messages to the Queue");
-                            console.log("QueueSize", messagesToProcessQueue.length);
-                            setTimeout(() => {
-                                resolve("Finally")
-                                console.log("Here");
-                            }, 5000)
-                        }
-                    } catch (err) {
-                        reject(err);
-                    }
-
-                })
-
-                .once('error', err => {
-                    reject('Error fetching messages: ' + err);
-                })
-                .once('end', () => {
-                    console.log('Done fetching all messages !' + msgsToDownLoad);
-                    imap.end();
-                })
-        });
+function fetchEmails(imap, emailIds) {
 
 
+    const emitter = new EventEmitter();
 
-    } catch (err) {
-        console.log("Gotcha bitch", err);
-    }
+    imap.fetch(emailIds, {
+        bodies: ['HEADER.FIELDS (FROM TO SUBJECT DATE)'], //HEADER.FIELDS (FROM TO SUBJECT DATE)','TEXT
+        struct: true
+    })
+        .on('message', async (msg, sequenceNumber) => {
+            try {
+                const parsedMessage = await parseMessage(msg, sequenceNumber);
+                emitter.emit('message', parsedMessage);
+            } catch (err) {
+                emitter.emit('error', err);
+
+            }
+        })
+        .once('error', err => {
+            emitter.emit('error', error);
+        })
+        .once('end', () => emitter.emit('end'));
+
+    return emitter;
+
 }
-
-
-
-
-
-
-
 
 async function parseMessage(msg, seqno) {
 
-
-    var prefix = '(#' + seqno + ') ';
-    console.log('Parsing Message with id' + prefix);
-    var message = {
+    let message = {
         //info
         //attachmentsPars          
     };
 
+    let parsedBody = false;
+    let parsedAttributes = false;
 
-    msg.on('body', function (stream, info) {
-        simpleParser(stream, (err, parsed) => {
-            const info = {
-                to: parsed.to.text,
-                from: parsed.from.text,
-                date: parsed.data,
-                subject: parsed.subject
+    return new Promise((resolve, reject) => {
+
+        msg.once('body', async function (stream, msgInfo) {
+            try {
+                
+                let parsed = await simpleParser(stream);
+                let from = parsed.from.value[0].address;
+                const info = {
+                    to: parsed.to.text,
+                    from: from,
+                    date: parsed.date,
+                    subject: parsed.subject
+                }
+                message.info = info;
+                parsedBody = true;
+                if (parsedAttributes) {
+                    resolve(message);
+                }
+            } catch (err) {
+                reject(err);
             }
-            message.info = info;
-
+            /*
             fs.writeFile('Files/' + 'msg-' + seqno + '-metadata.txt', JSON.stringify(parsed, null, 2), function (err) {
                 if (err) {
                     return console.log(err);
                 }
                 console.log("The file was saved!");
-            });
+            }); */
+
+
         });
 
-    });
-
-    msg.once('attributes', function (attrs) {
-        message.uid = attrs.uid;
-        //console.log(prefix + 'Attributes: %s', inspect(attrs, false, 8));
-        fs.writeFile('Files/' + 'msg-' + seqno + '-struct.txt', JSON.stringify(attrs.struct, null, 2), function (err) {
-            if (err) {
-                return console.log(err);
+        msg.once('attributes', function (attrs) {
+            try {
+                message.uid = attrs.uid;
+                message.attachments = findAttachmentParts(attrs.struct);
+                parsedAttributes = true;
+                if (parsedBody) {
+                    resolve(message);
+                }
+                /*
+                //console.log(prefix + 'Attributes: %s', inspect(attrs, false, 8));
+                fs.writeFile('Files/' + 'msg-' + seqno + '-struct.txt', JSON.stringify(attrs.struct, null, 2), function (err) {
+                    if (err) {
+                        return console.log(err);
+                    }
+                    console.log("The file was saved!");
+                });
+                */
+            } catch (err) {
+                resolve(err);
             }
-            console.log("The file was saved!");
+
+
         });
 
-        message.attachments = findAttachmentParts(attrs.struct);
 
-    });
 
-    return new Promise((resolve, reject) => {
-        msg.once('end', function () {
-            console.log(prefix + 'Finished');
-            resolve(message);
-        });
     })
 
 
@@ -239,7 +242,8 @@ function buildAttMessageFunction(attachment) {
 
 module.exports = {
     getConnection,
-    findEmailIds
+    findEmailIds,
+    fetchEmails,
 }
 
 var JSONEncodeStream = require('./encode');
