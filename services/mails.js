@@ -1,4 +1,4 @@
-require('dotenv').config()
+require('dotenv').config();
 const Promise = require('bluebird');
 const crypto = require("crypto");
 
@@ -14,74 +14,108 @@ searchEmails().then(mailIds => {
     });
 
 
+//TODO: Should be called by route
 async function searchEmails(searchParams) {
-    
+
     const connection = await EmailHelper.getConnection({
         user: 'juansb827@gmail.com',
-        password: 'EUPUNEANA12345',
+        password: process.env.PASS,
         host: 'imap.gmail.com',
         port: 993,
         tls: true
     });
-    //'focuscontable@gmail.com'
-    let emailIds = await EmailHelper.findEmailIds(connection, 'September 20, 2018' ,'notifications@github.com');
-    let unproccessedEmailIds = await bulkRegister(emailIds);//emailIds //
+    //'notifications@github.com'
+    let emailIds = await EmailHelper.findEmailIds(connection, 'September 20, 2018', 'focuscontable@gmail.com');
+    let unproccessedEmailIds = emailIds //await bulkRegister(emailIds);//
 
-    
-    //TODO: starts proccessing the emails asynchronously
+
+    //Starts proccessing the emails asynchronously
     proccessEmailsAsync(connection, unproccessedEmailIds);
-    
-    
+
+
     return unproccessedEmailIds;
 
 }
 
 /**
- * @description - fetchs the emails and inserts their information (subject, date, header, etc..) into the db
+ * @description - fetches the emails and inserts their information (subject, date, header, etc..) into the db
  */
-function proccessEmailsAsync(connection, emailIds){
+function proccessEmailsAsync(connection, emailIds) {
     console.log("Started email proccessing async");
 
     //TODO: (Somehow) Continue incase the process is interrupted
     EmailHelper.fetchEmails(connection, emailIds)
-        .on('message', message =>{
+        .on('message', message => {
             //console.log('Fetched message ', message.uid);            
             const _msg = {
                 from: message.info.from,
                 subject: message.info.subject,
-                date: message.info.date, 
+                date: message.info.date,
                 proccessed: true,
                 processingState: 'INFO',
-                attachments: message.attachments.length, 
+                attachments: message.attachments.length,
             }
 
-            const matchingAttachments = message.attachments;
-            if(matchingAttachments.length === 0){                
+
+            if (message.attachments.length === 0) {
                 _msg.processingState = 'DONE';
                 _msg.attachmentsState = 'DONE';
                 _msg.matchingAttachments = 0;
             }
 
             Email.update(_msg, {
-                where: { uid: ''+message.uid }
+                where: { uid: '' + message.uid }
             })
-            .then(()=>{
-                //TODO: start async attachment proccessing
-
-            })
-            .catch(err => {
-                //TODO: (Somehow) Retry failed emails
-                console.log('Error updating email info', err);        
-            });
+                .then(() => {
+                    //Starts async attachments proccessing                
+                    if (message.attachments.length !== 0) {
+                        processAttachmentsAsync(message.uid, message.attachments);
+                    }
+                })
+                .catch(err => {
+                    //TODO: (Somehow) Retry failed emails
+                    console.log('Error updating email info', err);
+                });
         })
-        .on('error', err =>{
+        .on('error', err => {
             console.log('Error fetching message info', err);
         })
-        .on('end', ()=>{
+        .on('end', () => {
             console.log("#################################Proccess Ended");
             connection.end();
         })
 }
+
+/**
+ * @description - fetches an email attachments and processes it accordingly (e.g convertes .XML into Invoices)
+ * @param uid - id of the email in the inbox
+ * @param attachments - attachment parts
+ */
+function processAttachmentsAsync(uid, attachments) {
+    if(!uid || !attachments){
+        console.log('processAttachmentsAsync', 'Invalid Param');
+    }
+    const filteredAttachments = filterAttachments(attachments);
+
+}
+
+function filterAttachments(attachments) {
+    return attachments.filter(part => {
+        const name = part.params.name;
+        if (!name) {
+            return false;
+        }
+
+        const extention = name.slice(-4).toUpperCase();
+
+        if (extention === 'XML'
+            || extention === 'PDF') {
+            return true;
+        }
+
+        return false;
+    })
+};
 
 /**
  *  @description - inserts the id of the email (the id which comes from the inbox) into the db
@@ -104,7 +138,7 @@ function bulkRegister(ids) {
         }
     })
 
- 
+
 
     return new Promise((resolve, reject) => {
         Email.bulkCreate(emails, { ignoreDuplicates: true })
@@ -117,7 +151,7 @@ function bulkRegister(ids) {
 
             })
             .then(createdEmails => {
-                const emailIds = createdEmails.map(mail => mail.get('uid'))                
+                const emailIds = createdEmails.map(mail => mail.get('uid'))
                 resolve(emailIds);
             })
             .catch(err => {

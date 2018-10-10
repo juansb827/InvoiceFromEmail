@@ -6,6 +6,7 @@ const { EventEmitter } = require('events');
 const inspect = require('util').inspect;
 var fs = require('fs'), fileStream;
 var utf8 = require('utf8');
+const base64 = require('base64-stream')
 
 var quotedPrintable = require('quoted-printable');
 
@@ -32,7 +33,7 @@ async function findEmailIds(imap, startingDate, sender) {
     const inbox = await imap.openBoxAsync('INBOX', true);
     //'September 20, 2018'
     //'focuscontable'
-    return imap.searchAsync(['ALL', ['SINCE', startingDate ], ['FROM', sender]]);
+    return imap.searchAsync(['ALL', ['SINCE', startingDate], ['FROM', sender]]);
 
 }
 
@@ -107,7 +108,7 @@ async function parseMessage(msg, seqno) {
 
         msg.once('body', async function (stream, msgInfo) {
             try {
-                
+
                 let parsed = await simpleParser(stream);
                 let from = parsed.from.value[0].address;
                 const info = {
@@ -169,19 +170,47 @@ async function parseMessage(msg, seqno) {
 
 }
 
-function downloadAttachment(uid, part) {
-    const name = part.params.name;
-    if (name && name.length > 4
-        && name.slice(-4).toUpperCase() === ".XML") {
-        console.log("Download", name);
+async function downloadAttachment(uid, part, imap) {
 
-        imap.fetch(uid, { //do not use imap.seq.fetch here
-            bodies: [part.partID],
-            struct: true
-        })
-            .on('message', buildAttMessageFunction(part));
-
+    if (!uid) {
+        throw new Error('[downloadAttachment]', 'Invalid uid', uid);
     }
+
+    if (!part || !part.params || !part.partID) {
+        throw new Error('[downloadAttachment]', 'Invalid Attachment Part', part);
+    }
+
+    const name = part.params.name;
+    console.log("Download", name);
+
+    let fetch = imap.fetch(uid, { //do not use imap.seq.fetch here
+        bodies: [part.partID],
+        struct: true
+    })
+
+    let dataStream = await new Promise((resolve, reject) => {
+        fetch.once('message', (message, seqno) => {
+            message.once('body', (stream, info) => {
+                resolve(stream)
+            });
+            message.once('error', err => reject(err));
+        });
+    });   
+
+    let fileURI = await buildAttMessageFunction(dataStream, part.encoding);
+    /* if (err.message === 'UNKNOW ENCODING') {
+        return reject(new Error('INVALID FILE'));
+    } */
+
+    return fileURI;
+
+
+
+
+
+
+    //buildAttMessageFunction(part)
+
 }
 
 function findAttachmentParts(struct, attachments) {
@@ -202,48 +231,45 @@ function findAttachmentParts(struct, attachments) {
 function toUpper(thing) { return thing && thing.toUpperCase ? thing.toUpperCase() : thing; }
 
 
-function buildAttMessageFunction(attachment) {
+function buildAttMessageFunction(stream, encoding) {
+    return new Promise((resolve, reject) => {
+        var filename = 'Files/' + 'whatever.pdf';        
 
-    var filename = 'Files/' + attachment.params.name;
-    var encoding = attachment.encoding;
+        //Create a write stream so that we can stream the attachment to file;
+        console.log('Streaming this attachment to file', filename);
 
-    return function (msg, seqno) {
-        var prefix = '(#' + seqno + ') ';
-        msg.on('body', function (stream, info) {
-            //Create a write stream so that we can stream the attachment to file;
-            console.log(prefix + 'Streaming this attachment to file', filename, info);
-            var writeStream = fs.createWriteStream(filename);
-            writeStream.on('finish', function () {
-                console.timeEnd("dbsave");
-                console.log(prefix + 'Done writing to file %s', filename);
-            });
-
-            //stream.pipe(writeStream); this would write base64 data to the file.
-            //so we decode during streaming using 
-            if (toUpper(encoding) === 'BASE64') {
-                //the stream is base64 encoded, so here the stream is decode on the fly and piped to the write stream (file)
-                stream.pipe(base64.decode()).pipe(writeStream);
-            } else if (toUpper(encoding) === 'QUOTED-PRINTABLE') {
-                //here we have none or some other decoding streamed directly to the file which renders it useless probably
-                console.time("dbsave");
-
-                stream.pipe(json).pipe(writeStream);
-
-
-            } else {
-                console.log("UNKOWN ENCODING");
-            }
+        var writeStream = fs.createWriteStream(filename);
+        writeStream.once('finish', function () {
+            console.timeEnd("dbsave");
+            resolve(filename);
         });
-        msg.once('end', function () {
-            console.log(prefix + 'Finished attachment %s', filename);
-        });
-    };
+
+        //stream.pipe(writeStream); this would write base64 data to the file.
+        //so we decode during streaming using 
+        if (toUpper(encoding) === 'BASE64') {
+            //the stream is base64 encoded, so here the stream is decode on the fly and piped to the write stream (file)
+            console.time("dbsave");
+            stream.pipe(base64.decode()).pipe(writeStream);
+        } else if (toUpper(encoding) === 'QUOTED-PRINTABLE') {
+            console.time("dbsave");
+            stream.pipe(json).pipe(writeStream);
+        } else {
+            return reject(new Error("UNKOWN ENCODING"));
+        }
+
+    });
+
+
+
+
 }
 
 module.exports = {
     getConnection,
     findEmailIds,
     fetchEmails,
+    parseMessage,
+    downloadAttachment
 }
 
 var JSONEncodeStream = require('./encode');
