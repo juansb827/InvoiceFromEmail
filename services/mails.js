@@ -17,6 +17,7 @@ searchEmails().then(mailIds => {
 
 
 //TODO: Should be called by route
+
 async function searchEmails(searchParams) {
 
     const connection = await EmailHelper.getConnection({
@@ -26,9 +27,11 @@ async function searchEmails(searchParams) {
         port: 993,
         tls: true
     });
+
+       //if (1==1 )return ['3:v'];
     //'notifications@github.com'
     let emailIds = await EmailHelper.findEmailIds(connection, 'September 20, 2018', 'focuscontable@gmail.com');
-    let unproccessedEmailIds = await bulkRegister(emailIds);//emailIds //
+    let unproccessedEmailIds = emailIds //await bulkRegister(emailIds);//
 
 
     //Starts proccessing the emails asynchronously
@@ -74,9 +77,11 @@ function proccessEmailsAsync(connection, emailIds) {
             //Starts async attachments proccessing                                  
             Email.update(_msg, {
                 where: { uid: '' + message.uid }
-            }).then(() => {
-                return processAttachmentsAsync(message.uid, message.attachments, connection)
-            }).then(processedCount => {
+            })
+                .then(() => {
+                    return processAttachmentsAsync(message.uid, message.attachments, connection)
+                })
+                .then(processedCount => {
                     _msg.processingState = 'DONE';
                     _msg.attachmentsState = 'DONE';
                     _msg.matchingAttachments = processedCount;
@@ -117,7 +122,12 @@ async function processAttachmentsAsync(uid, attachments, connection) {
         console.log('processAttachmentsAsync', 'Invalid Param');
     }
 
+    var test = 0;
     function process(attch, cb) {
+        if (test == 1) {
+            connection = anotherCon;
+        }
+        test++;
         EmailHelper.getAttachmentStream(uid, attch.partID, attch.encoding, connection)
             .then(attchStream => {
                 const fileName = 'Files/' + attch.params.name;

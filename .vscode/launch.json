@@ -8,7 +8,7 @@
             "type": "node",
             "request": "launch",
             "name": "Launch Program",
-            "program": "${workspaceFolder}/services/mails.js"
+            "program": "${workspaceFolder}/services/Email/ObjectPool.test.js"
         }
     ]
 }
