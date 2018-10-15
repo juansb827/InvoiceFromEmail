@@ -45,12 +45,12 @@ async function searchEmails(searchParams) {
 
 /**
  * @description - fetches the emails and inserts their information (subject, date, header, etc..) into the db
+ * 
  * //TODO: (Somehow) Continue in case the process gets interrupted
  */
 async function proccessEmailsAsync(unproccessedEmails) {
     console.log("Started email proccessing async");
     const connection = await connectionsHelper.getConnection('juansb827@gmail.com');
-
     const uids = unproccessedEmails.map(mailInfo => mailInfo.uid);
     //to retrieve email PK with its uid
     const pkByUid = {};
@@ -82,31 +82,39 @@ async function proccessEmailsAsync(unproccessedEmails) {
                 });
 
             }
-            //Registers the info of the email (and its attachments)
+
             //inside a transaction
+
+            //Registers the info of the email (and its attachments)
             return sequelize.transaction(t => {
+
                 let chain = Email.update(_msg, {
                     where: { uid: '' + message.uid },
                     transaction: t
                 });
-                
+                const registeredAttchs = [];
                 message.attachments.forEach(attch => {
                     chain = chain.then(() => {
-                            return Attachment.create({
+                        return Attachment.create({
                             emailId: pkByUid[message.uid],
                             partId: attch.partID,
                             name: attch.params.name,
                             size: attch.size,
                             encoding: attch.encoding
-                        }, { transaction: t });
+                        }, { transaction: t }).then(result => {
+                            registeredAttchs.push(result);
+                        })
                     })
-                    
-                }) 
 
-                return chain;
+                })
+
+                return chain.then(() => {
+                    return registeredAttchs;
+                });
             })
-                .then(result => {
+                .then(registeredAttchs => {
                     console.log("TRANSACTION ENDED");
+                    processAttachmentsAsync(pkByUid[message.uid], message.uid, registeredAttchs);
                 })
                 .catch(err => {
                     console.log("Transaction Failed", err);
@@ -156,45 +164,94 @@ async function proccessEmailsAsync(unproccessedEmails) {
 
 /**
  * @description - fetches email attachments and processes them accordingly (e.g converts them .XML into Invoices)
+ * @param mailId - id of the email in the db
  * @param uid - id of the email in the inbox
- * @param attachments - attachment parts
+ * @param attachments - array of models.Attachment instances
  */
-async function processAttachmentsAsync(uid, attachments) {
+async function processAttachmentsAsync(emailId, uid, attachments) {
 
     if (!uid || !attachments) {
         console.log('processAttachmentsAsync', 'Invalid Param');
+        return;
     }
-
 
     async function process(attch) {
-        const connection = await connectionsHelper.getConnection('juansb827@gmail.com');
+        const attchPk = attch.id;
+        const name = attch.name;
+        const extention = name.slice(-4).toUpperCase();
+        switch (extention) {
+            case '.PDF':
+                const task = async () => {
+                    const connection = await connectionsHelper.getConnection('juansb827@gmail.com');
+                    const attchStream = await EmailHelper.getAttachmentStream(uid, attch.partId, attch.encoding, connection);
+                    const fileName = 'Files/' + attch.name;
+                    var writeStream = fs.createWriteStream(fileName);
+                    return new Promise((resolve, reject) => {
+                        writeStream.once('finish', () => {
+                            console.log('Wrote', fileName);
+                            connectionsHelper.releaseConnection(connection);
+                            resolve();
 
-        const attchStream = await EmailHelper.getAttachmentStream(uid, attch.partID, attch.encoding, connection);
 
-        const fileName = 'Files/' + attch.params.name;
-        var writeStream = fs.createWriteStream(fileName);
+                        });
 
-        writeStream.once('finish', () => {
-            console.log('Wrote', fileName);
-            connectionsHelper.releaseConnection(connection);
-        });
+                        writeStream.on('error', (err) => {
+                            connectionsHelper.releaseConnection(connection);
+                            reject(err);
+                        });
+                        attchStream.pipe(writeStream);
+                    }).then((byteArray) => {
+                        return Attachment.update({ processingState: 'DONE' }, {
+                            where: { id: attchPk }
+                        })
+                    });
+                }
+                return task();
 
-        writeStream.on('error', (err) => {
-            cb(err);
-        })
-        attchStream.pipe(writeStream);
+            case '.XMLL':
+                return Attachment.update({ processingState: 'DONE' },
+                    {
+                        where: { id: attchPk }
+                    })
+
+            default:
+                return Attachment.update(
+                    { processingState: 'SKIPPED' },
+                    {
+                        where: { id: attchPk }
+                    })
+        }
+
+
+
+
 
 
     }
-    let filtered = filterAttachments(attachments);
-
-    return new Promise((resolve, reject) => {
-        async.each(filtered, process, (err) => {
+    //let filtered = filterAttachments(attachments);
+    new Promise((resolve, reject) => {
+        async.each(attachments, process, (err) => {
             if (err) {
-                return reject(err);
+                return reject(err);            
             }
-            resolve(filtered.length);
+            console.log(`All Attachments of mail ID: ${emailId}, uid:${uid} processed`);               
+            resolve();            
         });
+    })
+    .then(()=>{
+        return Attachment.findAll({
+            attributes: [[sequelize.fn('COUNT', sequelize.col('id')), 'attch_count']],
+            where: { emailId: emailId, processingState: 'DONE' }
+        })
+    })  
+    .then(result => {
+        const count = result[0].get('attch_count');
+        Email.update({ attachmentsState: 'DONE', matchingAttachments: count }, {
+            where: { id: emailId }
+        })
+    })
+    .catch(err=> {
+        console.log(`[processAttachmentsAsync] failed for mail ID: ${emailId} with uid:${uid}`, err);
     })
 
 

@@ -4,7 +4,16 @@ module.exports = (sequelize, DataTypes) => {
         partId: DataTypes.STRING,
         name: DataTypes.STRING,
         size: DataTypes.INTEGER,
-        encoding: DataTypes.STRING
+        encoding: DataTypes.STRING,
+        processingState: {
+            /**
+             * UNPROCESSED - 
+             * SKIPPED  - 
+             * DONE - downloaded and processed (converted to invoice) 
+             */
+            type: DataTypes.ENUM('UNPROCESSED', 'SKIPPED', 'DONE'),
+            defaultValue: 'UNPROCESSED'
+        }
     });
 
     Attachment.associate = (models) => {     

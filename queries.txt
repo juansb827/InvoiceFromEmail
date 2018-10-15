@@ -1,0 +1,5 @@
+DELETE FROM "Attachments";
+DELETE FROM "Emails";
+SELECT * FROM "Attachments"
+SELECT * FROM "Emails"
+SELECT COUNT("id") AS "attch_count" FROM "Attachments" AS "Attachment" WHERE "Attachment"."id" = 24 AND "Attachment"."processingState" = 'DONE'
