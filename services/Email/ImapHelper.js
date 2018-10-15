@@ -29,8 +29,7 @@ let msgToProccessCount = 0;
  * 
  * @param {*} imap - an Imap instance
  */
-async function findEmailIds(imap, startingDate, sender) {
-    const inbox = await imap.openBoxAsync('INBOX', true);
+async function findEmailIds(imap, startingDate, sender) {    
     //'September 20, 2018'
     //'focuscontable'
     return imap.searchAsync(['ALL', ['SINCE', startingDate], ['FROM', sender]]);

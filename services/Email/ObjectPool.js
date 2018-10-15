@@ -1,4 +1,3 @@
-
 module.exports = class ObjectPool {
 
     constructor(maxCapacity ) {
@@ -50,18 +49,26 @@ module.exports = class ObjectPool {
     }
 
     async release(object) {
-        process.nextTick(() => {    
-            //If there is a consumer waiting for the resource, pass the object to it
-            //otherwise  put the resource back in the pool
-            if (this.waitingQ.length > 0) {
-                //TODO: use a better queue implementation, to get constant-time dequeueing
-                const task = this.waitingQ.shift();
-                task(object);
-
-            }else{
-                this.pool.push(object);
-            }           
-        });
+        if (!object){
+            throw new Error('Cannot release a null object, ', object);
+            //TODO: also check if object was instantiated by this ObjectPool
+        }
+        return new Promise((resolve, reject) => {
+            process.nextTick(() => {    
+                //If there is a consumer waiting for the resource, pass the object to it
+                //otherwise  put the resource back in the pool
+                if (this.waitingQ.length > 0) {
+                    //TODO: use a better queue implementation, to get constant-time dequeueing
+                    const task = this.waitingQ.shift();
+                    task(object);
+    
+                }else{
+                    this.pool.push(object);
+                }
+                resolve();           
+            });
+        })
+        
     }
 
 }

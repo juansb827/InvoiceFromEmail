@@ -3,13 +3,17 @@ const Promise = require('bluebird');
 const crypto = require("crypto");
 
 const { sequelize } = require('../db/models');
-const { Email } = require('../db/models');
+const { Email, Attachment } = require('../db/models');
 const EmailHelper = require('./Email/ImapHelper')
+
+const ImapConnections = require('./Email/ImapConnections');
+const connectionsHelper = new ImapConnections();
+
 const async = require('async');
 var fs = require('fs'), fileStream;
 
 searchEmails().then(mailIds => {
-    console.log("Finished:##", mailIds.length);
+    console.log("Finished:##", mailIds);
 })
     .catch(err => {
         console.log("Could not download emails", err);
@@ -20,36 +24,41 @@ searchEmails().then(mailIds => {
 
 async function searchEmails(searchParams) {
 
-    const connection = await EmailHelper.getConnection({
-        user: 'juansb827@gmail.com',
-        password: process.env.PASS,
-        host: 'imap.gmail.com',
-        port: 993,
-        tls: true
-    });
+    const connection = await connectionsHelper.getConnection('juansb827@gmail.com');
 
-       //if (1==1 )return ['3:v'];
+
+    //if (1==1 )return ['3:v'];
     //'notifications@github.com'
     let emailIds = await EmailHelper.findEmailIds(connection, 'September 20, 2018', 'focuscontable@gmail.com');
-    let unproccessedEmailIds = emailIds //await bulkRegister(emailIds);//
+    await connectionsHelper.releaseConnection(connection);
+    let unproccessedEmails = await bulkRegister(emailIds);//emailIds //
 
 
     //Starts proccessing the emails asynchronously
-    proccessEmailsAsync(connection, unproccessedEmailIds);
+    proccessEmailsAsync(unproccessedEmails);
 
 
-    return unproccessedEmailIds;
+
+    return unproccessedEmails;
 
 }
 
 /**
  * @description - fetches the emails and inserts their information (subject, date, header, etc..) into the db
+ * //TODO: (Somehow) Continue in case the process gets interrupted
  */
-function proccessEmailsAsync(connection, emailIds) {
+async function proccessEmailsAsync(unproccessedEmails) {
     console.log("Started email proccessing async");
+    const connection = await connectionsHelper.getConnection('juansb827@gmail.com');
 
-    //TODO: (Somehow) Continue incase the process is interrupted
-    EmailHelper.fetchEmails(connection, emailIds)
+    const uids = unproccessedEmails.map(mailInfo => mailInfo.uid);
+    //to retrieve email PK with its uid
+    const pkByUid = {};
+    unproccessedEmails.forEach(mailInfo => {
+        pkByUid[mailInfo.uid] = mailInfo.id;
+    });
+
+    EmailHelper.fetchEmails(connection, uids)
         .on('message', message => {
 
             //console.log('Fetched message ', message.uid);            
@@ -73,13 +82,47 @@ function proccessEmailsAsync(connection, emailIds) {
                 });
 
             }
+            //Registers the info of the email (and its attachments)
+            //inside a transaction
+            return sequelize.transaction(t => {
+                let chain = Email.update(_msg, {
+                    where: { uid: '' + message.uid },
+                    transaction: t
+                });
+                
+                message.attachments.forEach(attch => {
+                    chain = chain.then(() => {
+                            return Attachment.create({
+                            emailId: pkByUid[message.uid],
+                            partId: attch.partID,
+                            name: attch.params.name,
+                            size: attch.size,
+                            encoding: attch.encoding
+                        }, { transaction: t });
+                    })
+                    
+                }) 
 
+                return chain;
+            })
+                .then(result => {
+                    console.log("TRANSACTION ENDED");
+                })
+                .catch(err => {
+                    console.log("Transaction Failed", err);
+                })
+            //const filteredAttch = filterAttachments(message.attachments);
+
+
+
+
+            if (1 == 1) return;
             //Starts async attachments proccessing                                  
             Email.update(_msg, {
                 where: { uid: '' + message.uid }
             })
                 .then(() => {
-                    return processAttachmentsAsync(message.uid, message.attachments, connection)
+                    return processAttachmentsAsync(message.uid, message.attachments)
                 })
                 .then(processedCount => {
                     _msg.processingState = 'DONE';
@@ -116,33 +159,32 @@ function proccessEmailsAsync(connection, emailIds) {
  * @param uid - id of the email in the inbox
  * @param attachments - attachment parts
  */
-async function processAttachmentsAsync(uid, attachments, connection) {
+async function processAttachmentsAsync(uid, attachments) {
 
     if (!uid || !attachments) {
         console.log('processAttachmentsAsync', 'Invalid Param');
     }
 
-    var test = 0;
-    function process(attch, cb) {
-        if (test == 1) {
-            connection = anotherCon;
-        }
-        test++;
-        EmailHelper.getAttachmentStream(uid, attch.partID, attch.encoding, connection)
-            .then(attchStream => {
-                const fileName = 'Files/' + attch.params.name;
-                var writeStream = fs.createWriteStream(fileName);
 
-                writeStream.once('finish', () => {
-                    console.log('Wrote', fileName);
-                    cb();
-                });
+    async function process(attch) {
+        const connection = await connectionsHelper.getConnection('juansb827@gmail.com');
 
-                writeStream.on('error', (err) => {
-                    cb(err);
-                })
-                attchStream.pipe(writeStream);
-            })
+        const attchStream = await EmailHelper.getAttachmentStream(uid, attch.partID, attch.encoding, connection);
+
+        const fileName = 'Files/' + attch.params.name;
+        var writeStream = fs.createWriteStream(fileName);
+
+        writeStream.once('finish', () => {
+            console.log('Wrote', fileName);
+            connectionsHelper.releaseConnection(connection);
+        });
+
+        writeStream.on('error', (err) => {
+            cb(err);
+        })
+        attchStream.pipe(writeStream);
+
+
     }
     let filtered = filterAttachments(attachments);
 
@@ -182,7 +224,7 @@ function filterAttachments(attachments) {
  *  @description - inserts the id of the email (the id which comes from the inbox) into the db
  *  so we can keep track of what emails have been already proccessed  
  *  @param mailIds - list of ids to register in the Db
- *  @returns - the list of ids that were not already registered  in the db
+ *  @returns - the list of emails (only the ids uid) that were not already registered  in the db
  */
 function bulkRegister(ids) {
 
@@ -206,14 +248,17 @@ function bulkRegister(ids) {
             .then(() => {
                 //bulkCreate doesnt return the uids so we have to do a query to find them
                 return Email.findAll({
-                    attributes: ['uid'],
+                    attributes: ['id', 'uid'],
                     where: { batchId: batchId }
                 });
 
             })
             .then(createdEmails => {
-                const emailIds = createdEmails.map(mail => mail.get('uid'))
+                const emailIds = createdEmails.map(mail => {
+                    return { id: mail.get('id'), uid: mail.get('uid') };
+                });
                 resolve(emailIds);
+
             })
             .catch(err => {
                 reject(err);

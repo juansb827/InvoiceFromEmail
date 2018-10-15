@@ -12,7 +12,8 @@ const models = {
   Invoice: sequelize.import('./Invoice'),
   Email: sequelize.import('./Email'),  
   User: sequelize.import('./User'),
-  Company: sequelize.import('./Company') 
+  Company: sequelize.import('./Company'),
+  Attachment: sequelize.import('./Attachment')  
 };
 
 Object.keys(models).forEach((modelName) => {
