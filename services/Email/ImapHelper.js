@@ -1,3 +1,4 @@
+
 const Promise = require('bluebird');
 const Imap = require('imap');
 const MailParser = require('mailparser').MailParser;
@@ -8,7 +9,7 @@ var fs = require('fs'), fileStream;
 var utf8 = require('utf8');
 const base64 = require('base64-stream')
 
-var quotedPrintable = require('quoted-printable');
+var quotedPrintableDecode = require('./encode')();
 
 
 
@@ -230,7 +231,7 @@ function getDecodedStream(stream, encoding) {
 
     } else if (toUpper(encoding) === 'QUOTED-PRINTABLE') {
         console.time("dbsave");
-        return stream.pipe(json);
+        return stream.pipe(quotedPrintableDecode);
     } else {
         throw new Error("UNKOWN ENCODING");
     }
@@ -245,5 +246,4 @@ module.exports = {
     getAttachmentStream
 }
 
-var JSONEncodeStream = require('./encode');
-var json = JSONEncodeStream();
+

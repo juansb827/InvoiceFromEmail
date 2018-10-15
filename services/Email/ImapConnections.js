@@ -1,4 +1,4 @@
-const ObjectPool = require('./ObjectPool');
+const ObjectPool = require('../../utils/ObjectPool');
 const ImapHelper = require('./ImapHelper');
 
 const MAXIMUM_GLOBAL_CONNECTIONS = 10; //

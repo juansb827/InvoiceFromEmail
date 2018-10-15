@@ -1,6 +1,6 @@
 require('dotenv').config();
 var fs = require('fs'), fileStream;
-const ImapHelper = require('./Email/ImapHelper');
+const ImapHelper = require('./ImapHelper');
 
 async function test() {
 
