@@ -1,6 +1,7 @@
 require('dotenv').config();
 var fs = require('fs'), fileStream;
 const ImapHelper = require('./ImapHelper');
+const { AuthenticationError, InternalError } = require('./Errors');
 
 async function test() {
 
@@ -19,10 +20,10 @@ async function test() {
             try {
                 const parsedMessage = msg//await ImapHelper.parseMessage(msg, sequenceNumber);
                 console.log("Parsed", parsedMessage.attachments);
-                
+
                 var writeStream = fs.createWriteStream('Files/some.xml');
                 writeStream.once('finish', function () {
-                    console.timeEnd("dbsave");                    
+                    console.timeEnd("dbsave");
                 });
 
                 const part = parsedMessage.attachments[1];
@@ -49,5 +50,31 @@ async function test() {
 
 }
 
+async function testError() {
+    
+    try {
+        const connection = await ImapHelper.getConnection({
+            user: 'juansb827@gmail.com',
+            password: process.env.PASS,
+            host: 'imap.gmail.com',
+            port: 993,
+            tls: true
+        });
+    }catch(error){
+        
+        if (error instanceof AuthenticationError) {
+            console.log('###AuthenticationError', error);
+        }
 
-test().catch(err => console.log('Error con', err));
+        if (error instanceof InternalError) {
+            console.log('###InternalError', error);
+        }
+        
+        console.log('###InvalidError', error);
+    }
+
+}
+testError();
+
+
+//test().catch(err => console.log('Error con', err));

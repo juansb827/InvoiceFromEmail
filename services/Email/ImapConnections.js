@@ -1,3 +1,4 @@
+const logger = require('../../utils/logger');
 const ObjectPool = require('../../utils/ObjectPool');
 const ImapHelper = require('./ImapHelper');
 
@@ -15,7 +16,6 @@ const sampleMailConf = {
 module.exports = class ImapConnections{
 
     
-
     constructor(){
         this.potentialConnections = 0;
         this.connectionPools = {};
@@ -32,7 +32,7 @@ module.exports = class ImapConnections{
             return conn; 
         }
 
-        if (this.potentialConnections + poolConf.maxConnections > MAXIMUM_GLOBAL_CONNECTIONS ){
+        if (this.potentialConnections + poolConf.maxConnections > MAXIMUM_GLOBAL_CONNECTIONS ){            
             throw new Error(
                 `Cannot create a Pool with maxConnections=${poolConf.maxConnections}, 
                  potentialConnections=${this.potentialConnections} and MAX=${MAXIMUM_GLOBAL_CONNECTIONS}`);

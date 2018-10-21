@@ -9,7 +9,11 @@ var fs = require('fs'), fileStream;
 var utf8 = require('utf8');
 const base64 = require('base64-stream')
 
+const debug = require('debug')('invoice-processor:imap-helper');
+
 var quotedPrintableDecode = require('./encode')();
+
+const { AuthenticationError, InternalError } = require('./Errors');
 
 
 
@@ -47,20 +51,23 @@ function connectToEmailServer(imapConfiguration) {
     const imap = new Imap(imapConfiguration);
 
     return new Promise((resolve, reject) => {
-        Promise.promisifyAll(imap);
+        Promise.promisifyAll(imap);        
 
-        imap.once('error', function (err) {
-            console.log("ImapHelper- connectToEmailServer", "Error creating connection " + imapConfiguration.user);
-            reject(new Error("Error connecting to Inbox" + err));
+        imap.once('error', function (err) {            
+            debug("connectToEmailServer", "Error creating connection to " + imapConfiguration.user);
+            if (err.textCode === 'AUTHENTICATIONFAILED'){
+                return reject(new AuthenticationError(err.message));
+            }        
+            return reject(new InternalError(err));  
         });
 
         imap.once('ready', () => {
-            console.log("ImapHelper- connectToEmailServer", "Created connection " + imapConfiguration.user);
+            debug("connectToEmailServer", "Created connection " + imapConfiguration.user);            
             resolve(imap);
         });
 
         imap.once('end', () => {
-            console.log("ImapHelper- connectToEmailServer", "Ended connection " + imapConfiguration.user);
+            debug("connectToEmailServer", "Ended connection " + imapConfiguration.user);                        
         });
 
         imap.connect();

@@ -6,7 +6,7 @@ module.exports = class ObjectPool {
         this.size = 0;        
         //Waiting for a object t
         this.waitingQ = [];
-        this.create = null; //Function that returns a new instance of type T
+        this.create = null; //Factory function for the type of object this queue is containing
     }
 
     /*

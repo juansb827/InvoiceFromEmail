@@ -23,8 +23,13 @@ searchEmails().then(mailIds => {
 //TODO: Should be called by route
 
 async function searchEmails(searchParams) {
-
-    const connection = await connectionsHelper.getConnection('juansb827@gmail.com');
+    
+    try{
+        const connection = await connectionsHelper.getConnection('juansb827@gmail.com');
+    }catch(err){
+        logger.error('searchEmails, could not get the connection: ', err.message);
+    }
+    
 
 
     //if (1==1 )return ['3:v'];
