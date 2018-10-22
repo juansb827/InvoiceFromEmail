@@ -1,37 +1,70 @@
 require('dotenv').config();
+
 const Promise = require('bluebird');
 const crypto = require("crypto");
-
-const { sequelize } = require('../db/models');
-const { Email, Attachment } = require('../db/models');
-const EmailHelper = require('./Email/ImapHelper')
-
-const ImapConnections = require('./Email/ImapConnections');
-const connectionsHelper = new ImapConnections();
-
 const async = require('async');
 var fs = require('fs'), fileStream;
 
+const { sequelize } = require('../db/models');
+const { Email, Attachment } = require('../db/models');
+const EmailHelper = require('./Email/ImapHelper/ImapHelper')
+
+const ImapConnections = require('./Email/ImapConnections');
+const emailErrors = require('./Email/ImapHelper/Errors');
+const connectionsHelper = new ImapConnections();
+const logger = require('../utils/logger');
+
+//TODO: move to express
+const next = (function (err, req, res, next) {
+     
+    /* We log the error internaly */
+    
+    
+    
+    err.statusCode = err.statusCode || 500;
+    err.clientMessage = err.clientMessage || 'Internal Error';
+    
+    if (err.statusCode != 500){
+        message = err.clientMessage || message;
+    }
+    err.requestId = "433434";
+    logger.error(err);
+    //res.status(err.statusCode).json({ "message": err.clientMessage });
+
+});
+
+//TODO: move to a route
 searchEmails().then(mailIds => {
     console.log("Finished:##", mailIds);
 })
-    .catch(err => {
-        console.log("Could not download emails", err);
+    .catch(error => {
+        
+        if (error.originalError instanceof emailErrors.AuthenticationError) {            
+            error.statusCode = 400;
+            error.clientMessage = 'Autentication Error, please check email user and password';       
+        }
+        else if (error.originalError instanceof emailErrors.ConnectionError) {
+            error.statusCode = 400;
+            error.clientMessage = 'Could not connect with Email Server, please check email configuration';                   
+        }
+        next(error);
+        
     });
 
 
 //TODO: Should be called by route
+/**
+ * example :
+ *      try{
+ *          searchEmails
+ *      }catch( err ){
+ *         
 
+ *      }
+ */
 async function searchEmails(searchParams) {
-    
-    try{
-        const connection = await connectionsHelper.getConnection('juansb827@gmail.com');
-    }catch(err){
-        logger.error('searchEmails, could not get the connection: ', err.message);
-    }
-    
 
-
+    const connection = await connectionsHelper.getConnection('juansb827@gmail.com');
     //if (1==1 )return ['3:v'];
     //'notifications@github.com'
     let emailIds = await EmailHelper.findEmailIds(connection, 'September 20, 2018', 'focuscontable@gmail.com');
@@ -237,27 +270,27 @@ async function processAttachmentsAsync(emailId, uid, attachments) {
     new Promise((resolve, reject) => {
         async.each(attachments, process, (err) => {
             if (err) {
-                return reject(err);            
+                return reject(err);
             }
-            console.log(`All Attachments of mail ID: ${emailId}, uid:${uid} processed`);               
-            resolve();            
+            console.log(`All Attachments of mail ID: ${emailId}, uid:${uid} processed`);
+            resolve();
         });
     })
-    .then(()=>{
-        return Attachment.findAll({
-            attributes: [[sequelize.fn('COUNT', sequelize.col('id')), 'attch_count']],
-            where: { emailId: emailId, processingState: 'DONE' }
+        .then(() => {
+            return Attachment.findAll({
+                attributes: [[sequelize.fn('COUNT', sequelize.col('id')), 'attch_count']],
+                where: { emailId: emailId, processingState: 'DONE' }
+            })
         })
-    })  
-    .then(result => {
-        const count = result[0].get('attch_count');
-        Email.update({ attachmentsState: 'DONE', matchingAttachments: count }, {
-            where: { id: emailId }
+        .then(result => {
+            const count = result[0].get('attch_count');
+            Email.update({ attachmentsState: 'DONE', matchingAttachments: count }, {
+                where: { id: emailId }
+            })
         })
-    })
-    .catch(err=> {
-        console.log(`[processAttachmentsAsync] failed for mail ID: ${emailId} with uid:${uid}`, err);
-    })
+        .catch(err => {
+            console.log(`[processAttachmentsAsync] failed for mail ID: ${emailId} with uid:${uid}`, err);
+        })
 
 
 

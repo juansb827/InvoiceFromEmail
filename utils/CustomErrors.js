@@ -30,7 +30,21 @@ class InternalError extends DomainError {
     }
 }
 
+class AppError extends Error {
+    constructor(message, data, error) {        
+        super(message);
+        Error.captureStackTrace(this, this.constructor);        
+        this.statusCode = null;                
+        this.clientMessage = null;
+        this.requestId = null;
+        this.data = data;
+        this.originalError = error;
+
+    }
+}
+
 module.exports = {
     ResourceNotFoundError,
     InternalError,
+    AppError
 };

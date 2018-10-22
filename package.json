@@ -19,6 +19,7 @@
     "pg": "^7.4.3",
     "quoted-printable": "^1.0.1",
     "sequelize": "^4.39.0",
-    "sequelize-auto-migrations": "^1.0.2"
+    "sequelize-auto-migrations": "^1.0.2",
+    "winston": "^3.1.0"
   }
 }

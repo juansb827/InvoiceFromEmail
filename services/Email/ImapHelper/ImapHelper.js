@@ -13,7 +13,7 @@ const debug = require('debug')('invoice-processor:imap-helper');
 
 var quotedPrintableDecode = require('./encode')();
 
-const { AuthenticationError, InternalError } = require('./Errors');
+const { AuthenticationError, InternalError, ConnectionError } = require('./Errors');
 
 
 
@@ -58,7 +58,7 @@ function connectToEmailServer(imapConfiguration) {
             if (err.textCode === 'AUTHENTICATIONFAILED'){
                 return reject(new AuthenticationError(err.message));
             }        
-            return reject(new InternalError(err));  
+            return reject(new ConnectionError(err.message));  
         });
 
         imap.once('ready', () => {

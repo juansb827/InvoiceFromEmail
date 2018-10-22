@@ -10,6 +10,13 @@ class DomainError extends Error {
 
 class AuthenticationError extends DomainError {
     constructor(message) {
+        super(`Could not authenticate: ${message} `);
+        this.data = { message };
+    }
+}
+
+class ConnectionError extends DomainError {
+    constructor(message) {
         super(`Could not establish a connection: ${message} `);
         this.data = { message };
     }
@@ -26,4 +33,5 @@ class InternalError extends DomainError {
 module.exports = {
     AuthenticationError,
     InternalError,
+    ConnectionError
 };
