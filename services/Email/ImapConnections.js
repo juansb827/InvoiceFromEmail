@@ -5,7 +5,7 @@ const ImapHelper = require('./ImapHelper/ImapHelper');
 
 const MAXIMUM_GLOBAL_CONNECTIONS = 10; //maximum number of connections across all pools
 const sampleMailConf = {
-    user: 'juansb827@gmail.comm',
+    user: 'juansb827@gmail.com',
     password: process.env.PASS,
     host: 'imap.gmail.com',
     port: 993,
@@ -66,7 +66,7 @@ module.exports = class ImapConnections {
         this.potentialConnections += poolConf.maxConnections;
         this.connectionPools[poolId] = pool;
 
-        logger.info('ConnectionPool - Created new Connection', { poolConf: safePoolConf });
+        logger.info('ConnectionPool - Created new Pool', { poolConf: safePoolConf });
     }
 
     async removePool(poolId) {
@@ -77,23 +77,25 @@ module.exports = class ImapConnections {
     }
 
     async getConnection(poolId) {
+        console.log('Gett Con');
         poolId = 'juansb827@gmail.com';
         let pool = this.connectionPools[poolId];
         if (!pool) {
             this.addNewPool(poolId, sampleMailConf);
             pool = this.connectionPools[poolId]
         }
-        const conn = pool.take();
+        const conn = await pool.take();
         return conn;
     }
 
     async releaseConnection(connection) {
+        console.log('Release Con');
         if (!connection) {
             throw new Error('Connection cannot be null');
         }
         const poolId = connection.poolId;
         const pool = this.connectionPools[poolId];
-        return pool.release(connection);
+        return await pool.release(connection);
     }
 
 }

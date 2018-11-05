@@ -2,9 +2,8 @@
 module.exports = (sequelize, DataTypes) => {
 
     const Email = sequelize.define('Email', {
-        uid: {
-            type: DataTypes.STRING,
-            unique: true
+        uid: { //id of the message in the Inbox 
+            type: DataTypes.STRING            
         },
         from: DataTypes.STRING,
         date: DataTypes.DATE,
@@ -12,7 +11,7 @@ module.exports = (sequelize, DataTypes) => {
         processingState: {
             /**
              * UNPROCESSED - only the uid of the email has been registerd
-             * INFO  - info (from, subject, date etc..)of the email has been registered
+             * INFO  - info (from, subject, date etc.., attachments)of the email has been registered
              * DONE - info registered and attachments processed
              */
             type: DataTypes.ENUM('UNPROCESSED', 'INFO', 'DONE'),
