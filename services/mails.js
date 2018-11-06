@@ -83,7 +83,40 @@ async function searchEmails(searchParams) {
   return unregisteredEmails;
 }
 
-async function registerEmailsAsync(unregisteredEmails) {
+/*
+* @description - starts a worker for the email account 
+    (if there is already a worker for the account it doesn't do anything)     
+
+  All State is managed through DB to achieve a Fault-Tolerant Process:
+  1 - look in the database for pending emails in this account 
+        (emails with status 'PROCESSING' or 'INFO')        
+  2 - for the emails with status 'PROCESSING'  
+       download and save info(subject, date, metadata of the attachments)  
+       change the status to 'INFO'
+  3 - for each email 
+        - for each attachment with status 'UNPROCESSED' or (currentTime - PROCESSING_STARTED > X seconds)
+            - if it is not an Invoice
+                - change status to 'SKIPPED':
+                - If there are no more attachments with status 'UNPROCESSED' 
+                        change the Status of the email to 'PROCESSED'
+            - if it is an Invoice
+                - download it if not already downloaded (FileURI == null)
+                - Change Attachment status to 'PROCESSING' and set time 'PROCESSING_STARTED' to currentTime, 
+                    So after 'X' seconds time the attachment will be considered as UNPROCESSED,
+                    this is necessary to deal with the fact that the Invoice-Proccesor may fail for 
+                    some reason
+                - trigger an Invoice-Processor, it will:                 
+                    - Extract Invoice Data and save it in DB
+                    - Mark the attachment as 'PROCESSED'
+                    - Check DB and if there are no more attachments with status 'UNPROCESSED' 
+                        for the  email it will change its status to 'PROCESSED'
+
+
+            
+  
+*/
+async function startEmailWorker(emailAccount) {
+  
   try {
     const emails = await getEmailsData(unregisteredEmails);
     const savedEmails = await saveEmailsData(emails); 
@@ -91,7 +124,7 @@ async function registerEmailsAsync(unregisteredEmails) {
     // startWorker (savedEmails) //starts email processing worker
     console.log(savedEmails);
   } catch (err) {
-      console.log(err);
+      console.log(err); 
   }
 }
 
@@ -196,6 +229,8 @@ function hue() {
             } */
 
   //Registers the info of the email (and its attachments)
+  //inside a transaction, so the info of the emails and its attachments
+  //are always registered in an atomic operation
   return sequelize
     .transaction(t => {
       let chain = Email.update(_msg, {
