@@ -8,10 +8,10 @@ const inspect = require('util').inspect;
 var fs = require('fs'), fileStream;
 var utf8 = require('utf8');
 const base64 = require('base64-stream')
-
+const split2 = require('split2');
 const debug = require('debug')('invoice-processor:imap-helper');
 
-var quotedPrintableDecode = require('./encode')();
+var QuotedPrintableDecode = require('./encode');
 
 const { AuthenticationError, InternalError, ConnectionError } = require('./Errors');
 
@@ -200,7 +200,7 @@ async function getAttachmentStream(mailId, attachmentPartId, encoding, imap) {
         });
     });
 
-    var filePath = `Files/${mailId}`;
+    
     return getDecodedStream(dataStream, encoding);
     /* if (err.message === 'UNKNOW ENCODING') {
         return reject(new Error('INVALID FILE'));
@@ -232,13 +232,12 @@ function getDecodedStream(stream, encoding) {
     //(or whatever the encondig of the attachment Is)           
     //so we have to decode the stream
     if (toUpper(encoding) === 'BASE64') {
-        //the stream is base64 encoded, so here the stream is decode on the fly and piped to the write stream (file)
-        console.time("dbsave");
+        //the stream is base64 encoded, so here the stream is decode on the fly and piped to the write stream (file)              
         return stream.pipe(base64.decode());
+        
 
-    } else if (toUpper(encoding) === 'QUOTED-PRINTABLE') {
-        console.time("dbsave");
-        return stream.pipe(quotedPrintableDecode);
+    } else if (toUpper(encoding) === 'QUOTED-PRINTABLE') {                     
+        return stream.pipe(new QuotedPrintableDecode());
     } else {
         throw new Error("UNKOWN ENCODING");
     }

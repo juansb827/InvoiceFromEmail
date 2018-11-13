@@ -1,24 +1,28 @@
-var Transform = require('stream').Transform;
-var inherits = require('util').inherits;
-var utf8 = require('utf8');
-var quotedPrintable = require('quoted-printable');
+var Transform = require("stream").Transform;
+var quotedPrintable = require("quoted-printable");
 
-module.exports = JSONEncode;
-function JSONEncode(options) {
-    if (!(this instanceof JSONEncode))
-        return new JSONEncode(options);
-    if (!options) options = {};
-    options.objectMode = true;
-    Transform.call(this, options);
-}
 
-inherits(JSONEncode, Transform);
-JSONEncode.prototype._transform = function _transform(obj, encoding, callback) {    
+module.exports = class DecodeStream extends Transform {
+  constructor() {
+    super();
+    this.textChunks = [];
+  }
+
+  
+
+  _transform(chunk, encoding, callback) {
     try {
-        obj =  utf8.decode(quotedPrintable.decode(''+obj));
+        //TODO: check if its possible to decode individual chunks
+        this.textChunks.push(chunk.toString());
     } catch (err) {
-        return callback(err);
+      return callback(err);
     }
-    this.push(obj);
+    this.push();
     callback();
+  }
+
+  _flush(callback) {
+    this.push(quotedPrintable.decode(this.textChunks.join('')));
+    callback();
+  }
 };

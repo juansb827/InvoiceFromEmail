@@ -6,7 +6,8 @@ const async = require("async");
 var fs = require("fs"),
   fileStream;
 
-const { sequelize } = require("../db/models");
+const { sequelize, Sequelize } = require("../db/models");
+const Op = Sequelize.Op;
 const { Email, Attachment } = require("../db/models");
 const EmailHelper = require("./Email/ImapHelper/ImapHelper");
 
@@ -32,6 +33,8 @@ const next = function(err, req, res, next) {
 
 //TODO: move to a route
 searchEmails()
+  .then(() => startEmailWorker())
+  //startEmailWorker()
   .then(mailIds => {
     console.log("Finished:##", mailIds);
   })
@@ -59,9 +62,8 @@ searchEmails()
  *      }
  */
 async function searchEmails(searchParams) {
-  const connection = await connectionsHelper.getConnection(
-    "juansb827@gmail.com"
-  );
+  const emailAccount = "juansb827@gmail.com";
+  const connection = await connectionsHelper.getConnection();
   //if (1==1 )return ['3:v'];
   //'notifications@github.com'
   let emailIds = await EmailHelper.findEmailIds(
@@ -72,15 +74,15 @@ async function searchEmails(searchParams) {
 
   await connectionsHelper.releaseConnection(connection);
   //Register only the Ids of the found emails
-  let unregisteredEmails = await bulkRegister(emailIds); //emailIds //
+  let unproccessedEmails = await bulkRegister(emailIds, emailAccount); //emailIds //
 
   //Register the rest of the information of each email (subject, data, attachments ) etcc..
   //In the background
   if (unproccessedEmails.length !== 0) {
-    registerEmailsAsync(unregisteredEmails);
+    //startEmailWorker(emailAccount);
   }
 
-  return unregisteredEmails;
+  return unproccessedEmails;
 }
 
 /*
@@ -89,8 +91,8 @@ async function searchEmails(searchParams) {
 
   All State is managed through DB to achieve a Fault-Tolerant Process:
   1 - look in the database for pending emails in this account 
-        (emails with status 'PROCESSING' or 'INFO')        
-  2 - for the emails with status 'PROCESSING'  
+        (emails with status 'UNPROCESSED' or 'INFO')        
+  2 - for the emails with status 'UNPROCESSED'  
        download and save info(subject, date, metadata of the attachments)  
        change the status to 'INFO'
   3 - for each email 
@@ -109,23 +111,79 @@ async function searchEmails(searchParams) {
                     - Extract Invoice Data and save it in DB
                     - Mark the attachment as 'PROCESSED'
                     - Check DB and if there are no more attachments with status 'UNPROCESSED' 
-                        for the  email it will change its status to 'PROCESSED'
-
-
-            
+                        for the  email it will change its status to 'PROCESSED'          
   
 */
-async function startEmailWorker(emailAccount) {
-  
+async function startEmailWorker(emailAccount = "juansb827@gmail.com") {
   try {
-    const emails = await getEmailsData(unregisteredEmails);
-    const savedEmails = await saveEmailsData(emails); 
-    //TODO
-    // startWorker (savedEmails) //starts email processing worker
-    console.log(savedEmails);
+    const pendingEmails = await getPendingEmails(emailAccount);
+
+    const unprocessedmails = pendingEmails.filter(email => {
+      return email.processingState === "UNPROCESSED";
+    });
+
+    if (unprocessedmails.length !== 0) {
+      //Updates the model instance
+      await getEmailsData(unprocessedmails);
+      //Saves the Model in DB
+      for (email of unprocessedmails) {
+        await saveEmailsData(email);
+      }
+    }
+    const connection = await connectionsHelper.getConnection(
+      "juansb827@gmail.com"
+    );
+
+    for (email of pendingEmails) {
+      for (attach of email.Attachments) {
+        if (attach.name.indexOf("PDF") !== -1) {
+          //continue;
+        }
+
+        let attachmentStream = await getAttachmentStream(
+          email.uid,
+          attach,
+          connection
+        );
+        await new Promise((resolve, reject) => {
+          attachmentStream
+            .pipe(fs.createWriteStream("Files/" + attach.name))
+            .once("error", err => {
+              reject(err);
+            })
+            .once("finish", () => {
+              resolve();
+            });
+
+          attachmentStream.once("finish", () => {
+            console.log("Wrote", "Files/" + attach.name);
+          });
+          attachmentStream.once("error", err => {
+            reject(err);
+          });
+        });
+      }
+    }
+
+    
+    console.log("savedEmails");
   } catch (err) {
-      console.log(err); 
+    console.log(err);
   }
+}
+
+/**
+ * @description - gets the emails that are not completely processed
+ */
+async function getPendingEmails(emailAccount) {
+  return Email.findAll({
+    include: [Attachment],
+    where: {
+      emailAccount: emailAccount,
+
+      processingState: { [Op.not]: "DONE", [Op.not]: null }
+    }
+  });
 }
 
 /**
@@ -135,268 +193,95 @@ async function startEmailWorker(emailAccount) {
  */
 async function getEmailsData(unproccessedEmails) {
   return new Promise(async (resolve, reject) => {
-    console.log("Started email proccessing async");
     const connection = await connectionsHelper.getConnection(
       "juansb827@gmail.com"
     );
-    const uids = unproccessedEmails.map(mailInfo => mailInfo.uid);
-    //to retrieve email PK with its uid
-    const pkByUid = {};
-    unproccessedEmails.forEach(mailInfo => {
-      pkByUid[mailInfo.uid] = mailInfo.id;
+
+    //object to retrieve email with its uid
+    const emailsByUid = {};
+    unproccessedEmails.forEach(email => {
+      emailsByUid[email.uid] = email;
     });
 
-    const emails = [];
     let remaining = unproccessedEmails.length;
+    const uids = unproccessedEmails.map(mailInfo => mailInfo.uid);
     EmailHelper.fetchEmails(connection, uids)
       .on("message", async message => {
-        const _msg = {
-          from: message.info.from,
-          subject: message.info.subject,
-          date: message.info.date,
-          proccessed: true,
-          processingState: "INFO",
-          attachments: message.attachments.length,
-          attachmentList: []
-        };
-        _msg.id = pkByUid[message.uid];
+        const emailModel = emailsByUid[message.uid];
+
+        emailModel.from = message.info.from;
+        emailModel.subject = message.info.subject;
+        emailModel.date = message.info.date;
+        emailModel.attachments = message.attachments.length;
+        emailModel.attachmentList = [];
 
         message.attachments.forEach(attch => {
-          _msg.attachmentList.push({
-            emailId: pkByUid[message.uid],
-            partId: attch.partID,
-            name: attch.params.name,
-            size: attch.size,
-            encoding: attch.encoding
-          });
+          emailModel.Attachments.push(
+            Attachment.build({
+              emailId: emailsByUid[message.uid].id,
+              partId: attch.partID,
+              name: attch.params.name,
+              size: attch.size,
+              encoding: attch.encoding
+            })
+          );
         });
 
-        emails.push(_msg);
         remaining--;
         if (remaining == 0) {
           await connectionsHelper.releaseConnection(connection);
-          resolve(emails);
+          resolve();
         }
       })
       .on("error", err => {
         reject(err);
       })
-      .on("end", () => {});
+      .on("end", () => {
+        console.log("End", remaining);
+      });
+    console.log("Start", remaining);
   });
 }
 
-saveEmailsData = async emailsData => {
-  let savedEmails = [];
-  for (const message of emailsData) {
-    await sequelize.transaction(t => {
-      let chain = Email.update(message, {
-        where: { id: "" + message.id },
-        transaction: t
-      });
+var saveEmailsData = async message => {
+  return sequelize.transaction(t => {
+    message.processingState = "INFO";
+    let chain = message.save({
+      /**message, {
+      where: { id: "" + message.id }, */
+      transaction: t
+    });
 
-      const registeredAttchs = [];
-      message.attachmentList.forEach(attch => {
-        chain = chain.then(() => {
-          return Attachment.create(attch, { transaction: t }
-          ).then(result => {
-            registeredAttchs.push(result);
-          });
-        });
-      });
-
-      return chain.then(() => {
-        const emailDataCopy = { ...message };
-        emailDataCopy.attachmentList = registeredAttchs;
-        savedEmails.push(emailDataCopy);
+    message.Attachments.forEach(attch => {
+      chain = chain.then(() => {
+        return attch.save({ transaction: t });
       });
     });
-  }
-  return savedEmails;
+
+    return chain;
+  });
 };
 
-function hue() {
-  /*
-
-            if (message.attachments.length === 0) {
-                _msg.processingState = 'DONE';
-                _msg.attachmentsState = 'DONE';
-                _msg.matchingAttachments = 0;
-
-                return Email.update(_msg, {
-                    where: { uid: '' + message.uid }
-                });
-
-            } */
-
-  //Registers the info of the email (and its attachments)
-  //inside a transaction, so the info of the emails and its attachments
-  //are always registered in an atomic operation
-  return sequelize
-    .transaction(t => {
-      let chain = Email.update(_msg, {
-        where: { uid: "" + message.uid },
-        transaction: t
-      });
-      const registeredAttchs = [];
-      message.attachments.forEach(attch => {
-        chain = chain.then(() => {
-          return Attachment.create(
-            {
-              emailId: pkByUid[message.uid],
-              partId: attch.partID,
-              name: attch.params.name,
-              size: attch.size,
-              encoding: attch.encoding
-            },
-            { transaction: t }
-          ).then(result => {
-            registeredAttchs.push(result);
-          });
-        });
-      });
-
-      return chain.then(() => {
-        return registeredAttchs;
-      });
-    })
-    .then(registeredAttchs => {
-      console.log("TRANSACTION ENDED");
-      processAttachmentsAsync(
-        pkByUid[message.uid],
-        message.uid,
-        registeredAttchs
-      );
-    })
-    .catch(err => {
-      console.log("Transaction Failed", err);
-    });
-
-  if (1 == 1) return;
-  //Starts async attachments proccessing
-  Email.update(_msg, {
-    where: { uid: "" + message.uid }
-  })
-    .then(() => {
-      return processAttachmentsAsync(message.uid, message.attachments);
-    })
-    .then(processedCount => {
-      _msg.processingState = "DONE";
-      _msg.attachmentsState = "DONE";
-      _msg.matchingAttachments = processedCount;
-      return Email.update(_msg, {
-        where: { uid: "ds" + message.uid }
-      });
-    })
-    .catch(err => {
-      //TODO: (Somehow) Retry failed emails
-      console.log("Error updating email info", err);
-    });
-}
 /**
  * @description - fetches email attachments and processes them accordingly (e.g converts them .XML into Invoices)
  * @param mailId - id of the email in the db
  * @param uid - id of the email in the inbox
  * @param attachments - array of models.Attachment instances
  */
-async function processAttachmentsAsync(emailId, uid, attachments) {
-  if (!uid || !attachments) {
+async function getAttachmentStream(uid, attachMetadata, connection) {
+  if (!uid) {
     console.log("processAttachmentsAsync", "Invalid Param");
     return;
   }
 
-  async function process(attch) {
-    const attchPk = attch.id;
-    const name = attch.name;
-    const extention = name.slice(-4).toUpperCase();
-    switch (extention) {
-      case ".PDF":
-        const task = async () => {
-          const connection = await connectionsHelper.getConnection(
-            "juansb827@gmail.com"
-          );
-          const attchStream = await EmailHelper.getAttachmentStream(
-            uid,
-            attch.partId,
-            attch.encoding,
-            connection
-          );
-          const fileName = "Files/" + attch.name;
-          var writeStream = fs.createWriteStream(fileName);
-          return new Promise((resolve, reject) => {
-            writeStream.once("finish", () => {
-              console.log("Wrote", fileName);
-              connectionsHelper.releaseConnection(connection);
-              resolve();
-            });
+  const attchStream = await EmailHelper.getAttachmentStream(
+    uid,
+    attachMetadata.partId,
+    attachMetadata.encoding,
+    connection
+  );
 
-            writeStream.on("error", err => {
-              connectionsHelper.releaseConnection(connection);
-              reject(err);
-            });
-            attchStream.pipe(writeStream);
-          }).then(byteArray => {
-            return Attachment.update(
-              { processingState: "DONE" },
-              {
-                where: { id: attchPk }
-              }
-            );
-          });
-        };
-        return task();
-
-      case ".XMLL":
-        return Attachment.update(
-          { processingState: "DONE" },
-          {
-            where: { id: attchPk }
-          }
-        );
-
-      default:
-        return Attachment.update(
-          { processingState: "SKIPPED" },
-          {
-            where: { id: attchPk }
-          }
-        );
-    }
-  }
-  //let filtered = filterAttachments(attachments);
-  new Promise((resolve, reject) => {
-    async.each(attachments, process, err => {
-      if (err) {
-        return reject(err);
-      }
-      console.log(
-        `All Attachments of mail ID: ${emailId}, uid:${uid} processed`
-      );
-      resolve();
-    });
-  })
-    .then(() => {
-      return Attachment.findAll({
-        attributes: [
-          [sequelize.fn("COUNT", sequelize.col("id")), "attch_count"]
-        ],
-        where: { emailId: emailId, processingState: "DONE" }
-      });
-    })
-    .then(result => {
-      const count = result[0].get("attch_count");
-      Email.update(
-        { attachmentsState: "DONE", matchingAttachments: count },
-        {
-          where: { id: emailId }
-        }
-      );
-    })
-    .catch(err => {
-      console.log(
-        `[processAttachmentsAsync] failed for mail ID: ${emailId} with uid:${uid}`,
-        err
-      );
-    });
+  return attchStream;
 }
 
 function filterAttachments(attachments) {
@@ -422,7 +307,7 @@ function filterAttachments(attachments) {
  *  @param mailIds - list of ids to register in the Db
  *  @returns - the list of emails (only the ids uid) that were not already registered  in the db
  */
-function bulkRegister(ids) {
+function bulkRegister(ids, emailAccount) {
   if (!ids || ids.length == 0) {
     return Promise.reject(new Error("Ids is empty"));
   }
@@ -432,7 +317,8 @@ function bulkRegister(ids) {
   const emails = ids.map(id => {
     return {
       uid: id,
-      batchId: batchId
+      batchId: batchId,
+      emailAccount: emailAccount
     };
   });
 
