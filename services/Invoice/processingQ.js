@@ -89,12 +89,8 @@ const q = queue(async task => {
 let counter = 0;
 process.on("message", task => {
 
-  if (counter == 2) {
-    clearInterval(interval);
-    return;
-  }
 
-  console.log("New Invoice To Process : " + counter,);
+  console.log("New Invoice To Process : " + counter);
   counter++;
   
   q.push(task, function(err) {
@@ -105,6 +101,7 @@ process.on("message", task => {
   });
 });
 process.send(true);
+/*
 var interval = setInterval(() => {
   process.send(true);
-}, 1000);
+}, 1000); */
