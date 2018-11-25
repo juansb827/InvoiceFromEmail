@@ -6,5 +6,17 @@ SELECT COUNT("id") AS "attch_count" FROM "Attachments" AS "Attachment" WHERE "At
 
 //TODO
 //Check errors in mails/processMailsAsync
-//Improve Error Loggin
+//Improve Error Logging
 
+SELECT * FROM "Emails"
+SELECT * FROM "Attachments" order by "emailId"
+UPDATE "Attachments" SET "processingState" = 'DOWNLOADED'
+UPDATE "Emails" SET "processingState" = 'UNPROCESSED'
+DELETE FROM "Emails";
+DELETE FROM "Attachments"
+SELECT * FROM "Invoices"
+SELECT * FROM "InvoiceItems"
+delete FROM "Invoices";
+delete  from "InvoiceItems";
+
+SELECT * FROM "Attachments" AS "Attachment" WHERE "Attachment"."processingState" != 'DONE' AND "Attachment"."processingState" IS NOT NULL AND "Attachment"."emailId" = 13;

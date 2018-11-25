@@ -16,6 +16,8 @@ const emailErrors = require("./Email/ImapHelper/Errors");
 const connectionsHelper = new ImapConnections();
 const logger = require("../utils/logger");
 
+const activeWorkers = {};
+
 //TODO: move to express
 const next = function(err, req, res, next) {
   /* We log the error internaly */
@@ -33,8 +35,10 @@ const next = function(err, req, res, next) {
 
 //TODO: move to a route
 searchEmails()
-  .then(() => startEmailWorker())
-  //startEmailWorker()
+.then(() => startEmailWorker())
+//startEmailWorker()
+
+//startWorkers()
   .then(mailIds => {
     console.log("Finished:##", mailIds);
   })
@@ -49,7 +53,7 @@ searchEmails()
         "Could not connect with Email Server, please check email configuration";
     }
     next(error);
-  });
+  }); 
 
 //TODO: Should be called by route
 /**
@@ -61,6 +65,9 @@ searchEmails()
 
  *      }
  */
+
+//startWorkers();
+//setInterval(startWorkers, 1000 * 10);
 async function searchEmails(searchParams) {
   const emailAccount = "juansb827@gmail.com";
   const connection = await connectionsHelper.getConnection();
@@ -85,9 +92,43 @@ async function searchEmails(searchParams) {
   return unproccessedEmails;
 }
 
+/** Starts a worker for each account with pending emails to process */
+async function startWorkers() {
+  const emailAccounts = await Email.findAll({
+    attributes: ["emailAccount"],
+    where: {
+      processingState: { [Op.not]: "DONE", [Op.not]: null }
+    },
+    group: ["emailAccount"]
+  });
+
+  emailAccounts.forEach(email => {
+    const account = email.emailAccount;
+    checkIfCanStartWorker(account).then(canStart => {
+      if (canStart) {
+        startEmailWorker(account);
+      }
+    });
+  });
+}
+
+//TODO: move logic to REDIS to make this an stateless application
+async function checkIfCanStartWorker(emailAccount) {
+  const limit = 1 * 60 * 1000; // 1 min
+  if (activeWorkers[emailAccount]) {
+    const expirationTime = activeWorkers[emailAccount];
+    const current = new Date().getTime();
+    if (expirationTime > current) {
+      return false;
+    }
+  }
+
+  activeWorkers[emailAccount] = new Date().getTime() + limit;
+  return true;
+}
 /*
 * @description - starts a worker for the email account 
-    (if there is already a worker for the account it doesn't do anything)     
+    
 
   All State is managed through DB to achieve a Fault-Tolerant Process:
   1 - look in the database for pending emails in this account 
@@ -115,63 +156,89 @@ async function searchEmails(searchParams) {
   
 */
 async function startEmailWorker(emailAccount = "juansb827@gmail.com") {
+  logger.info("Started worker for account: " + emailAccount);
+
   try {
     const pendingEmails = await getPendingEmails(emailAccount);
 
-    const unprocessedmails = pendingEmails.filter(email => {
-      return email.processingState === "UNPROCESSED";
+    const unprocessedEmails = pendingEmails.filter(email => {
+      return email.processingState === "UNPROCESSED"; //Emails without attachment metadata
     });
 
-    if (unprocessedmails.length !== 0) {
-      //Updates the model instance
-      await getEmailsData(unprocessedmails);
-      //Saves the Model in DB
-      for (email of unprocessedmails) {
+    if (unprocessedEmails.length !== 0) {
+      //Finds the Attachment Metadata and Updates the model instance
+      await getEmailsData(unprocessedEmails);
+      //Saves the instance in DB
+      for (email of unprocessedEmails) {
         await saveEmailsData(email);
       }
     }
     const connection = await connectionsHelper.getConnection(
       "juansb827@gmail.com"
     );
-
+    //For Each Email downloads its attachments (if not already downloaded)
     for (email of pendingEmails) {
       for (attach of email.Attachments) {
-        if (attach.name.indexOf("PDF") !== -1) {
-          //continue;
+        if (attach.processingState != "UNPROCESSED") {
+          continue;
         }
+      
+        try {
+          const extention = attach.name.slice(-3).toUpperCase();
+          let fileURI = null;
+          let processingState = 'SKIPPED';
 
-        let attachmentStream = await getAttachmentStream(
-          email.uid,
-          attach,
-          connection
-        );
-        await new Promise((resolve, reject) => {
-          attachmentStream
-            .pipe(fs.createWriteStream("Files/" + attach.name))
-            .once("error", err => {
-              reject(err);
-            })
-            .once("finish", () => {
-              resolve();
-            });
+          if  ('PDF,XML'.includes(extention)){
+            let attachmentStream = await getAttachmentStream(
+              email.uid,
+              attach,
+              connection
+            );
+  
+            fileURI = await saveStream(attachmentStream, attach.name);
+            processingState = 'DOWNLOADED';
+            
+            if (extention === 'PDF') {
+              processingState = 'DONE';
+            }
 
-          attachmentStream.once("finish", () => {
-            console.log("Wrote", "Files/" + attach.name);
-          });
-          attachmentStream.once("error", err => {
-            reject(err);
-          });
-        });
+          }
+
+          attach.processingState = processingState;         
+          attach.fileLocation = fileURI;
+
+          if (attach.name.indexOf("PDF") !== -1) {
+            //continue;
+          }
+          await attach.save();
+
+          logger.info("Wrote" + fileURI);
+        } catch (err) {
+          logger.error(err);
+        }
       }
     }
-
-    
-    console.log("savedEmails");
+    logger.info("Ended worker for account: " + emailAccount);
   } catch (err) {
-    console.log(err);
+    logger.error(err);
   }
 }
 
+
+
+
+async function saveStream(stream, fileName) {
+  return new Promise((resolve, reject) => {
+    stream
+      .pipe(fs.createWriteStream("Files/" + fileName))
+      .once("error", err => {
+        reject(err);
+      })
+      .once("finish", () => {
+        resolve("Files/" + fileName);
+      });
+  });
+}
 /**
  * @description - gets the emails that are not completely processed
  */
@@ -180,8 +247,11 @@ async function getPendingEmails(emailAccount) {
     include: [Attachment],
     where: {
       emailAccount: emailAccount,
-
-      processingState: { [Op.not]: "DONE", [Op.not]: null }
+      [Op.and]: [
+        { 'processingState': { [Op.ne]: 'DONE'} }, 
+        { 'processingState': { [Op.ne]  : null} } 
+      ],
+      
     }
   });
 }

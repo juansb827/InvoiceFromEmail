@@ -3,12 +3,16 @@ module.exports = (sequelize, DataTypes) => {
     const Invoice = sequelize.define('Invoice', {
         code: {
             type: DataTypes.STRING,
-            unique: true,
+            //unique: true, ONLY REMOVE WHILE TESTING
         },        
+        uuid: {
+            type: DataTypes.STRING,
+            //unique: true, ONLY REMOVE WHILE TESTING
+        },
         received: DataTypes.DATE,                
         issue_date: DataTypes.DATE,                
-        issuer_id: DataTypes.INTEGER,                        
-        issuer_name: DataTypes.STRING,                        
+        issuer_id: DataTypes.INTEGER,     //NIT                   
+        issuer_name: DataTypes.STRING,    //NOMBRE_EMPRESA                    
         total: DataTypes.DECIMAL,                        
           
     });

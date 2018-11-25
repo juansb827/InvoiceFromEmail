@@ -5,13 +5,14 @@ module.exports = (sequelize, DataTypes) => {
         name: DataTypes.STRING,
         size: DataTypes.INTEGER,
         encoding: DataTypes.STRING,
+        fileLocation: DataTypes.STRING,
         processingState: {
             /**
              * UNPROCESSED - 
              * SKIPPED  - 
              * DONE - downloaded and processed (converted to invoice) 
              */
-            type: DataTypes.ENUM('UNPROCESSED', 'SKIPPED', 'DONE'),
+            type: DataTypes.ENUM('UNPROCESSED', 'SKIPPED', 'DOWNLOADED', 'DONE'),
             defaultValue: 'UNPROCESSED'
         }
     });

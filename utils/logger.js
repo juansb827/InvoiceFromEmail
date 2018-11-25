@@ -38,7 +38,7 @@ const devFormat = () => {
     }
 
     const formatError = info =>
-        `${info.level} MESSAGE: ${info.message} \n  STACKTRACE:\n  ${info.stack}\n`;
+        `${info.level} MESSAGE: ${info.message} \n  STACKTRACE:\n       ${info.stack}\n`;
 
 
     const formatAppError = info => {
@@ -135,7 +135,7 @@ const devFormat = () => {
                 return;
             }
 
-            //One param, either message or an error 
+            //One param, either a message or an error 
             return original(args[0]);
 
         };
