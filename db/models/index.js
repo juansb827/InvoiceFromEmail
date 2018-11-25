@@ -1,11 +1,9 @@
 const Sequelize = require('sequelize');
 
-var conStr = process.env.DB_CONNECTION_URL;
-const sequelize = new Sequelize(conStr,{
-  dialectOptions: {
-    ssl: true
-  }
-});
+const env       = process.env.NODE_ENV || 'development';
+const config = require('./../../config/db_config')[env];
+
+const sequelize = new Sequelize(config.url, config);
 
 const models = {
   InvoiceItem: sequelize.import('./InvoiceItem'),

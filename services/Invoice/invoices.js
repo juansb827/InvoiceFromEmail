@@ -1,28 +1,18 @@
-require("dotenv").config();
+
 
 const fs = require("fs"),
   select = require("xpath.js"),
   DOMParser = require("xmldom").DOMParser;
 
-const {
-  Invoice,
-  InvoiceItem,
-  Email,
-  Attachment,
-  sequelize,
-  Sequelize
-} = require("../db/models/");
-const { Op } = Sequelize;
-const { queue } = require("async");
 
-const q = queue((task, callback) => {
-  processInvoice(task.fileURI, task.attachment)
-    .then(callback)
-    .catch(err => {
-      console.error("Error processing the invoice", err);
-      callback();
-    });
-}, 2);
+
+/**
+ *
+ * @param attachment - optional, if present, it means the invoice came from an email
+ *
+ * */
+
+
 
 const headerFields = [
   {
@@ -100,19 +90,12 @@ const itemFields = [
   }
 ];
 
-processInvoice("Files/face_F0900547176003a6a6278.xml", {
-  id: 44,
-  emailId: 13
-}).then(invoice => {
-  console.log(invoice);
-});
 
-/**
- *
- * @param attachment - optional, if present, it means the invoice came from an email
- *
- * */
-async function processInvoice(fileLocation, attachment) {
+
+exports.processInvoice = async (fileLocation) => {
+
+  
+  
   const invoiceStr = await new Promise((resolve, reject) => {
     fs.readFile(fileLocation, "utf8", function(err, data) {
       if (err) {
@@ -124,58 +107,9 @@ async function processInvoice(fileLocation, attachment) {
 
   const invoiceDom = new DOMParser().parseFromString(invoiceStr);
   const invoice = getInvoiceData(invoiceDom);
+  return invoice;
 
-  await sequelize.transaction(async t => {
-    const savedInvoice = await Invoice.build(invoice.header).save({
-      transaction: t
-    });
-
-    invoice.items.forEach(item => {
-      item.invoiceId = savedInvoice.id;
-    });
-
-    let last = InvoiceItem.bulkCreate(invoice.items, { transaction: t });
-
-    if (!attachment) {
-      return last;
-    }
-
-    await last;
-
-    return Attachment.update(
-      {
-        processingState: "DONE"
-      },
-      {
-        transaction: t,
-        where: { id: attachment.id }
-      }
-    );
-
-    
-  });
-
-  if (!attachment) {
-    return;
-  }
-
-  const count = await Attachment.count({    
-    where: {      
-      [Op.and]: [
-        { 'processingState': { [Op.ne]: 'DONE'} }, 
-        { 'processingState': { [Op.ne]  : null} } 
-      ],
-      emailId: attachment.emailId
-    }
-  });
-
-  if (count === 0) { //Email has no pending attachments left
-    Email.update({
-      processingState : 'DONE'
-    },{
-      where: { id: attachment.emailId }
-    })
-  }
+ 
 
 
 }

@@ -15,73 +15,23 @@ const ImapConnections = require("./Email/ImapConnections");
 const emailErrors = require("./Email/ImapHelper/Errors");
 const connectionsHelper = new ImapConnections();
 const logger = require("../utils/logger");
-
+const { processInvoice } = require('./Invoice/InvoiceProcessor');
 const activeWorkers = {};
 
-//TODO: move to express
-const next = function(err, req, res, next) {
-  /* We log the error internaly */
-
-  err.statusCode = err.statusCode || 500;
-  err.clientMessage = err.clientMessage || "Internal Error";
-
-  if (err.statusCode != 500) {
-    message = err.clientMessage || message;
-  }
-  err.requestId = "433434";
-  logger.error(err);
-  //res.status(err.statusCode).json({ "message": err.clientMessage });
-};
-
-//TODO: move to a route
-searchEmails()
-.then(() => startEmailWorker())
-//startEmailWorker()
-
-//startWorkers()
-  .then(mailIds => {
-    console.log("Finished:##", mailIds);
-  })
-  .catch(error => {
-    if (error.originalError instanceof emailErrors.AuthenticationError) {
-      error.statusCode = 400;
-      error.clientMessage =
-        "Autentication Error, please check email user and password";
-    } else if (error.originalError instanceof emailErrors.ConnectionError) {
-      error.statusCode = 400;
-      error.clientMessage =
-        "Could not connect with Email Server, please check email configuration";
-    }
-    next(error);
-  }); 
-
-//TODO: Should be called by route
-/**
- * example :
- *      try{
- *          searchEmails
- *      }catch( err ){
- *         
-
- *      }
- */
-
-//startWorkers();
 //setInterval(startWorkers, 1000 * 10);
-async function searchEmails(searchParams) {
-  const emailAccount = "juansb827@gmail.com";
+const searchEmails = async (emailAccount, searchParams) => {
+  
   const connection = await connectionsHelper.getConnection();
-  //if (1==1 )return ['3:v'];
-  //'notifications@github.com'
+  companyId = 3;
   let emailIds = await EmailHelper.findEmailIds(
     connection,
-    "September 20, 2018",
-    "focuscontable@gmail.com"
+    searchParams.startingDate,
+    searchParams.sender,
   );
 
   await connectionsHelper.releaseConnection(connection);
   //Register only the Ids of the found emails
-  let unproccessedEmails = await bulkRegister(emailIds, emailAccount); //emailIds //
+  let unproccessedEmails = await bulkRegister(emailIds, emailAccount, companyId); //emailIds //
 
   //Register the rest of the information of each email (subject, data, attachments ) etcc..
   //In the background
@@ -155,7 +105,8 @@ async function checkIfCanStartWorker(emailAccount) {
                         for the  email it will change its status to 'PROCESSED'          
   
 */
-async function startEmailWorker(emailAccount = "juansb827@gmail.com") {
+async function startEmailWorker(emailAccount) {
+
   logger.info("Started worker for account: " + emailAccount);
 
   try {
@@ -173,9 +124,8 @@ async function startEmailWorker(emailAccount = "juansb827@gmail.com") {
         await saveEmailsData(email);
       }
     }
-    const connection = await connectionsHelper.getConnection(
-      "juansb827@gmail.com"
-    );
+    const connection = await connectionsHelper.getConnection(emailAccount);
+
     //For Each Email downloads its attachments (if not already downloaded)
     for (email of pendingEmails) {
       for (attach of email.Attachments) {
@@ -207,17 +157,25 @@ async function startEmailWorker(emailAccount = "juansb827@gmail.com") {
           attach.processingState = processingState;         
           attach.fileLocation = fileURI;
 
-          if (attach.name.indexOf("PDF") !== -1) {
-            //continue;
-          }
           await attach.save();
 
           logger.info("Wrote" + fileURI);
+          
         } catch (err) {
           logger.error(err);
         }
       }
     }
+
+    for (email of pendingEmails) {
+      for (attach of email.Attachments) {
+        const extention = attach.name.slice(-3).toUpperCase();
+        if (attach.processingState === "DOWNLOADED" && extention === 'XML') {        
+          processInvoice(attach.fileLocation, attach, email.companyId);
+        }
+      }
+    }
+    
     logger.info("Ended worker for account: " + emailAccount);
   } catch (err) {
     logger.error(err);
@@ -377,7 +335,7 @@ function filterAttachments(attachments) {
  *  @param mailIds - list of ids to register in the Db
  *  @returns - the list of emails (only the ids uid) that were not already registered  in the db
  */
-function bulkRegister(ids, emailAccount) {
+function bulkRegister(ids, emailAccount, companyId) {
   if (!ids || ids.length == 0) {
     return Promise.reject(new Error("Ids is empty"));
   }
@@ -388,7 +346,9 @@ function bulkRegister(ids, emailAccount) {
     return {
       uid: id,
       batchId: batchId,
-      emailAccount: emailAccount
+      emailAccount: emailAccount,
+      companyId: companyId
+
     };
   });
 
@@ -422,5 +382,7 @@ bulkRegister(['4324321332123s3','32131']).then(succ => {
     }) */
 
 module.exports = {
-  bulkRegister
-};
+      searchEmails,
+      startEmailWorker,
+      bulkRegister
+}

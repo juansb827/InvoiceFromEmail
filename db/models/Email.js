@@ -21,18 +21,19 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: "UNPROCESSED"
       },
       attachments: DataTypes.INTEGER,
+      /*
       matchingAttachments: DataTypes.INTEGER,
       attachmentsState: {
-        /*
+        *
          * UNPROCESSED - haven't event checked if the email has attachments
          * DONE - attachments have been successfully processed (e.g converted to invoices)
          * NO_ATTACHMENTS - this email had no attachments (at least no attachments useful for us,
          *                                                 we only care about certain .XML's and .PDF's )
          * ERROR - error processing the attachments
-         * */
+         * *
         type: DataTypes.ENUM("UNPROCESSED", "DONE", "ERROR"),
         defaultValue: "UNPROCESSED"
-      },
+      },*/
       batchId: DataTypes.STRING
     },
     {

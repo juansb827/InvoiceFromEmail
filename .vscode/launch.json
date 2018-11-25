@@ -8,7 +8,7 @@
             "type": "node",
             "request": "launch",
             "name": "Launch Program",
-            "program": "${workspaceFolder}/services/invoices.js"
+            "program": "${workspaceFolder}/services/Invoice/InvoiceProcessor.js"
         }
     ]
 }
