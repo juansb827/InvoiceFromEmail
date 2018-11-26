@@ -1,6 +1,8 @@
 const emailService = require('./mails')
 const emailErrors = require("./Email/ImapHelper/Errors");
 const logger = require("../utils/logger");
+const EmailWorker = require('./Email/EmailWorker');
+
 //TODO: move to express
 const next = function(err, req, res, next) {
   /* We log the error internaly */
@@ -22,8 +24,8 @@ emailService.searchEmails( "juansb827@gmail.com",
     startingDate: "September 20, 2018",
     sender: "focuscontable@gmail.com"
 })
-  .then(() => emailService.startEmailWorker("juansb827@gmail.com"))
-  //startEmailWorker()
+  .then(() => EmailWorker.startEmailWorker("juansb827@gmail.com"))
+  
   //startWorkers()
   .then(mailIds => {
     console.log("Finished:##", mailIds);

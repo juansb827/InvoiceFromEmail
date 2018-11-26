@@ -8,7 +8,7 @@ const inspect = require('util').inspect;
 var fs = require('fs'), fileStream;
 var utf8 = require('utf8');
 const base64 = require('base64-stream')
-const split2 = require('split2');
+
 const debug = require('debug')('invoice-processor:imap-helper');
 
 var QuotedPrintableDecode = require('./encode');

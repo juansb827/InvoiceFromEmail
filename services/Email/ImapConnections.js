@@ -14,7 +14,7 @@ const sampleMailConf = {
 };
 
 
-module.exports = class ImapConnections {
+module.exports =new (class ImapConnections {
 
 
     constructor() {
@@ -98,4 +98,4 @@ module.exports = class ImapConnections {
         return await pool.release(connection);
     }
 
-}
+})();
