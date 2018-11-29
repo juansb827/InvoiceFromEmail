@@ -1,119 +1,45 @@
 require("dotenv").config();
-// Load the AWS SDK for Node.js
-const AWS = require("aws-sdk");
-// Load credentials and set the region from the JSON file
-AWS.config.update({ region: "us-east-2" });
+
+const { processInvoice } = require("./invoices");
+
+const {
+  Invoice,
+  InvoiceItem,
+  Email,
+  Attachment,
+  sequelize,
+  Sequelize
+} = require("../../db/models");
+
+const { Op } = Sequelize;
 const Consumer = require('sqs-consumer');
 
-const { fork } = require("child_process");
+const AWS = require("aws-sdk");
+const AWS_DEFAULT_REGION = process.env.AWS_DEFAULT_REGION;
+AWS.config.update({ region: AWS_DEFAULT_REGION });
+//const sqs = new AWS.SQS({ apiVersion: "2012-11-05" });
 
-let forked = fork("./services/Invoice/processingQ.js");
+//Invoice Processing Q
+const SQS_INVOICE_QUEUE_URL = process.env.SQS_INVOICE_QUEUE_URL;
 
-// Create an SQS service object
-const sqs = new AWS.SQS({ apiVersion: "2012-11-05" });
-
-const queueTimeout = 1000;
-let lastPing = new Date().getTime();
-
-let unsendTasks = [];
-
-forked.on("message", msg => {
-  console.log("Ping");
-  lastPing = new Date().getTime();
-  for (let task of unsendTasks) {
-    forked.send(task);
-  }
-});
-
-forked.once("exit", function(code, signal) {
-  console.log(
-    "child process exited with " + `code ${code} and signal ${signal}`
-  );
-});
-
-//registerListeners();
-
-const queueIsAlive = () => {
-  const isAlive = new Date().getTime() - lastPing > queueTimeout;
-  if (!isAlive) {
-    console.log("Recreate");
-    forked.kill("SIGINT");
-    forked = fork("./services/Invoice/processingQ.js");
-    registerListeners();
-  }
-  return isAlive;
-};
-
-const task = {
-  fileURI: "Files/face_F0900547176003a6a62782.xml",
-  attachment: {
-    id: 6,
-    emailId: 3
-  },
-  companyId: 3
-};
-
-/*
-exports.processInvoice = (fileURI, attachment, companyId) => {
-    
-    const task = {fileURI, attachment, companyId}    
-    if(queueIsAlive()){
-        forked.send(task);
-    } else{
-        unsendTasks.push(task);
-    }    
-       
-} */
-
-//exports.processInvoice(task.fileURI, task.attachment, task.companyId);
-
-var params = {
-  DelaySeconds: 10,
-  MessageAttributes: {
-    Title: {
-      DataType: "String",
-      StringValue: "The Whistler"
-    },
-    Author: {
-      DataType: "String",
-      StringValue: "John Grisham"
-    },
-    WeeksOn: {
-      DataType: "Number",
-      StringValue: "6"
-    }
-  },
-  MessageBody:
-    "Information about current NY Times fiction bestseller for week of 12/11/2016.",
-  QueueUrl: process.env.SQS_INVOICE_QUEUE_URL
-};
-
-const processInvoice = () => {
-  sqs.sendMessage(params, function(err, data) {
-    if (err) {
-      console.log("Error", err);
-    } else {
-      console.log("Success", data.MessageId);
-    }
-  });
-};
-
-setTimeout(processInvoice, 4000);
-/*
-setInterval(() =>{
-    processInvoice();
-}, 1000) */
-
-module.exports = {
-  processInvoice
-};
 
 const app = Consumer.create({
-    queueUrl: process.env.SQS_INVOICE_QUEUE_URL,
+    queueUrl: SQS_INVOICE_QUEUE_URL,
     handleMessage: (message, done) => {
-        console.log('Handled message');
-      setTimeout(done, 10);
-      
+      const json = JSON.parse(message.Body);       
+      handleTask(json)
+        .then(() => { 
+          done();
+          app.stop();
+          sequelize.close();
+        })
+        .catch(err => {
+          console.log(err);
+          done(err);
+          app.stop();
+          sequelize.close();
+        })
+        
     }
   });
   
@@ -122,3 +48,74 @@ const app = Consumer.create({
   });
   
   app.start();
+
+  async function handleTask (task)  {  
+    const { fileURI, attachment, companyId } = task;
+    if (!companyId) {
+      throw new Error('companyId is required');
+    }
+    
+    const invoice = await processInvoice(fileURI, companyId, attachment);
+  
+    await sequelize.transaction(async t => {
+
+      const invoiceHeader = invoice.header;
+      invoiceHeader.companyId = companyId;
+  
+      if (attachment) {
+        invoiceHeader.emailId = attachment.emailId;
+      }
+  
+      const savedInvoice = await Invoice.build(invoiceHeader).save({
+        transaction: t
+      });
+  
+      invoice.items.forEach(item => {
+        item.invoiceId = savedInvoice.id;
+      });
+  
+      let last = InvoiceItem.bulkCreate(invoice.items, { transaction: t });
+  
+      if (!attachment) {
+        return last;
+      }
+  
+      await last;
+  
+      return Attachment.update(
+        {
+          processingState: "DONE"
+        },
+        {
+          transaction: t,
+          where: { id: attachment.id }
+        }
+      );
+    });
+  
+    if (!attachment) {
+      return;
+    }
+  
+    const count = await Attachment.count({
+      where: {
+        [Op.and]: [
+          { processingState: { [Op.ne]: "DONE" } },
+          { processingState: { [Op.ne]: null } }
+        ],
+        emailId: attachment.emailId
+      }
+    });
+  
+    if (count === 0) {
+      //Email has no pending attachments left
+      await Email.update(
+        {
+          processingState: "DONE"
+        },
+        {
+          where: { id: attachment.emailId }
+        }
+      );
+    }
+  }

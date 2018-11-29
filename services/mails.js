@@ -16,7 +16,7 @@ const emailErrors = require("./Email/ImapHelper/Errors");
 
 const logger = require("../utils/logger");
 
-const EmailWorker = require('./Email/EmailWorker');
+
 //const { processInvoice } = require('./Invoice/InvoiceProcessor');
 
 

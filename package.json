@@ -17,6 +17,7 @@
     "dotenv": "^6.0.0",
     "imap": "^0.8.19",
     "mailparser": "^2.3.4",
+    "multipipe": "^2.0.3",
     "pg": "^7.4.3",
     "quoted-printable": "^1.0.1",
     "sequelize": "^4.39.0",

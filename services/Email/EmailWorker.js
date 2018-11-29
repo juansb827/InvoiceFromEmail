@@ -1,17 +1,32 @@
-
+require("dotenv").config();
 const fs = require("fs");
 const logger = require("../../utils/logger");
-const connectionsHelper = require("./ImapConnections");
 const { Email, Attachment } = require("../../db/models");
 const { sequelize, Sequelize } = require("../../db/models");
 const ImapHelper = require("./ImapHelper/ImapHelper");
 const Op = Sequelize.Op;
 
+const AWS = require("aws-sdk");
+const AWS_DEFAULT_REGION = process.env.AWS_DEFAULT_REGION;
+AWS.config.update({ region: AWS_DEFAULT_REGION });
+const sqs = new AWS.SQS({ apiVersion: "2012-11-05" });
+//Invoice Processing Q
+const SQS_INVOICE_QUEUE_URL = process.env.SQS_INVOICE_QUEUE_URL;
+
 const activeWorkers = {}; //TODO: MOVE TO REDIS
 
+const sampleMailConf = {
+  user: "juansb827@gmail.com",
+  password: process.env.PASS,
+  host: "imap.gmail.com",
+  port: 993,
+  tls: true,
+  maxConnections: 5
+};
+
 module.exports = {
-    startEmailWorker
-}
+  startEmailWorker
+};
 
 /**
 * @description - starts a worker for the email account    
@@ -41,81 +56,75 @@ module.exports = {
                         for the  email it will change its status to 'PROCESSED'          
   
 */
-async function startEmailWorker (emailAccount)  {
-  logger.info("Started worker for account: " + emailAccount);
+async function startEmailWorker(emailAccount, connection) {
+  const pendingEmails = await getPendingEmails(emailAccount);
+  if (pendingEmails.length === 0) {
+    return;
+  }
+  const unprocessedEmails = pendingEmails.filter(email => {
+    return email.processingState === "UNPROCESSED"; //Emails without attachment metadata
+  });
 
-  try {
-    const pendingEmails = await getPendingEmails(emailAccount);
-
-    const unprocessedEmails = pendingEmails.filter(email => {
-      return email.processingState === "UNPROCESSED"; //Emails without attachment metadata
-    });
-
-    if (unprocessedEmails.length !== 0) {
-      //Finds the Attachment Metadata and Updates the model instance
-      await getEmailsData(unprocessedEmails);
-      //Saves the instance in DB
-      for (email of unprocessedEmails) {
-        await saveEmailsData(email);
-      }
+  if (unprocessedEmails.length !== 0) {
+    //Finds the Attachment Metadata and Updates the model instance
+    await getEmailsData(unprocessedEmails, connection);
+    //Saves the instance in DB
+    for (email of unprocessedEmails) {
+      await saveEmailsData(email);
     }
-    const connection = await connectionsHelper.getConnection(emailAccount);
+  }
 
-    //For Each Email downloads its attachments (if not already downloaded)
-    for (email of pendingEmails) {
-      for (attach of email.Attachments) {
-        if (attach.processingState != "UNPROCESSED") {
-          continue;
-        }
-
-        try {
-          const extention = attach.name.slice(-3).toUpperCase();
-          let fileURI = null;
-          let processingState = "SKIPPED";
-
-          if ("PDF,XML".includes(extention)) {
-
-            const  attachmentStream = await ImapHelper.getAttachmentStream(
-                email.uid,
-                attach.partId,
-                attach.encoding,
-                connection
-              );
-            
-           
-
-            fileURI = await saveStream(attachmentStream, attach.name);
-            processingState = "DOWNLOADED";
-
-            if (extention === "PDF") {
-              processingState = "DONE";
-            }
-          }
-
-          attach.processingState = processingState;
-          attach.fileLocation = fileURI;
-
-          await attach.save();
-
-          logger.info("Wrote" + fileURI);
-        } catch (err) {
-          logger.error(err);
-        }
+  //For Each Email downloads its attachments (if not already downloaded)
+  for (email of pendingEmails) {
+    for (attach of email.Attachments) {
+      if (attach.processingState != "UNPROCESSED") {
+        continue;
       }
-    }
 
-    for (email of pendingEmails) {
-      for (attach of email.Attachments) {
+      try {
         const extention = attach.name.slice(-3).toUpperCase();
-        if (attach.processingState === "DOWNLOADED" && extention === "XML") {
-          //processInvoice(attach.fileLocation, attach, email.companyId);
+        let fileURI = null;
+        let processingState = "SKIPPED";
+
+        if ("PDF,XML".includes(extention)) {
+          const attachmentStream = await ImapHelper.getAttachmentStream(
+            email.uid,
+            attach.partId,
+            attach.encoding,
+            connection
+          );
+
+          fileURI = await saveStream(attachmentStream, attach.name);
+          processingState = "DOWNLOADED";
+
+          if (extention === "PDF") {
+            processingState = "DONE";
+          }
         }
+
+        attach.processingState = processingState;
+        attach.fileLocation = fileURI;
+
+        await attach.save();
+
+        logger.info("Wrote" + fileURI);
+      } catch (err) {
+        logger.error(err);
       }
     }
-
-    logger.info("Ended worker for account: " + emailAccount);
-  } catch (err) {
-    logger.error(err);
+  }
+  
+  for (email of pendingEmails) {
+    for (attach of email.Attachments) {
+      const extention = attach.name.slice(-3).toUpperCase();
+      if (attach.processingState === "DOWNLOADED" && extention === "XML") {
+        await putOnInvoiceProcessinQ(
+          attach.fileLocation,
+          email.companyId,
+          attach
+        );
+      }
+    }
   }
 }
 
@@ -140,12 +149,8 @@ async function getPendingEmails(emailAccount) {
  * @param - unproccessedEmails - array of { mailPK, mailUID}
  * @returns array of mail information
  */
-async function getEmailsData(unproccessedEmails) {
-  return new Promise(async (resolve, reject) => {
-    const connection = await connectionsHelper.getConnection(
-      "juansb827@gmail.com"
-    );
-
+async function getEmailsData(unproccessedEmails, connection) {
+  return new Promise((resolve, reject) => {
     //object to retrieve email with its uid
     const emailsByUid = {};
     unproccessedEmails.forEach(email => {
@@ -178,7 +183,6 @@ async function getEmailsData(unproccessedEmails) {
 
         remaining--;
         if (remaining == 0) {
-          await connectionsHelper.releaseConnection(connection);
           resolve();
         }
       })
@@ -210,51 +214,84 @@ var saveEmailsData = async message => {
 };
 
 async function saveStream(stream, fileName) {
-    return new Promise((resolve, reject) => {
-      stream
-        .pipe(fs.createWriteStream("Files/" + fileName))
-        .once("error", err => {
-          reject(err);
-        })
-        .once("finish", () => {
-          resolve("Files/" + fileName);
-        });
-    });
+  return new Promise((resolve, reject) => {
+    stream
+      .pipe(fs.createWriteStream("Files/" + fileName))
+      .once("error", err => {
+        reject(err);
+      })
+      .once("finish", () => {
+        resolve("Files/" + fileName);
+      });
+  });
+}
+
+/** Starts a worker for each account with pending emails to process */
+async function attempToStartWorker(emailAccount) {
+  const alreadyRunning = !checkIfCanStartWorker(emailAccount);
+
+  if (alreadyRunning) {
+    logger.info("Worker already running for :" + emailAccount);
+    return;
   }
 
-  
-/** Starts a worker for each account with pending emails to process */
-async function startWorkers() {
-    const emailAccounts = await Email.findAll({
-      attributes: ["emailAccount"],
-      where: {
-        processingState: { [Op.not]: "DONE", [Op.not]: null }
-      },
-      group: ["emailAccount"]
-    });
-  
-    emailAccounts.forEach(email => {
-      const account = email.emailAccount;
-      checkIfCanStartWorker(account).then(canStart => {
-        if (canStart) {
-          startEmailWorker(account);
-        }
-      });
-    });
+  try {
+    logger.info("Started worker for account: " + emailAccount);
+    const connection = await ImapHelper.getConnection(sampleMailConf);
+    await connection.openBoxAsync("INBOX", true);
+    await startEmailWorker(emailAccount, connection);
+    logger.info("Ended worker for account: " + emailAccount);
+    await connection.end();
+    await sequelize.close();
+  } catch (err) {
+    logger.error(
+      "Error in worker for account: " + emailAccount + " " + err.stack
+    );
+  }
 }
-  
-  
+
 //TODO: move logic to REDIS to make this an stateless application
 async function checkIfCanStartWorker(emailAccount) {
-    const limit = 1 * 60 * 1000; // 1 min
-    if (activeWorkers[emailAccount]) {
-      const expirationTime = activeWorkers[emailAccount];
-      const current = new Date().getTime();
-      if (expirationTime > current) {
-        return false;
-      }
+  const limit = 1 * 60 * 1000; // 1 min
+  if (activeWorkers[emailAccount]) {
+    const expirationTime = activeWorkers[emailAccount];
+    const current = new Date().getTime();
+    if (expirationTime > current) {
+      return false;
     }
-  
-    activeWorkers[emailAccount] = new Date().getTime() + limit;
-    return true;
+  }
+
+  activeWorkers[emailAccount] = new Date().getTime() + limit;
+  return true;
 }
+
+async function putOnInvoiceProcessinQ(fileLocation, companyId, attach ) {
+
+  var payload = {
+    fileURI: fileLocation,
+    companyId: companyId,   
+    attachment: {    
+        id: attach.id,
+        emailId: attach.emailId
+    }
+      
+  }
+
+  var params = {
+    DelaySeconds: 10,
+    MessageAttributes: {     
+    },
+    MessageBody: JSON.stringify(payload), 
+    QueueUrl: SQS_INVOICE_QUEUE_URL
+  };
+
+  sqs.sendMessage(params, function(err, data) {
+    if (err) {
+      console.log("Error", err);
+    } else {
+      console.log("Success", data.MessageId);
+    }
+  });
+}
+
+attempToStartWorker("juansb827@gmail.com");

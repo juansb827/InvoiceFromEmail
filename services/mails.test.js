@@ -19,14 +19,15 @@ const next = function(err, req, res, next) {
 };
 
 //TODO: move to a route
+
 emailService.searchEmails( "juansb827@gmail.com",
-    {
-    startingDate: "September 20, 2018",
-    sender: "focuscontable@gmail.com"
-})
-  .then(() => EmailWorker.startEmailWorker("juansb827@gmail.com"))
+     {
+     startingDate: "September 20, 2018",
+     sender: "focuscontable@gmail.com"
+ })
+//   .then(() => EmailWorker.startEmailWorker("juansb827@gmail.com"))
   
-  //startWorkers()
+//EmailWorker.startEmailWorker("juansb827@gmail.com")
   .then(mailIds => {
     console.log("Finished:##", mailIds);
   })

@@ -7,7 +7,8 @@ const { EventEmitter } = require('events');
 const inspect = require('util').inspect;
 var fs = require('fs'), fileStream;
 var utf8 = require('utf8');
-const base64 = require('base64-stream')
+const base64 = require('base64-stream');
+const combine = require('multipipe');
 
 const debug = require('debug')('invoice-processor:imap-helper');
 
@@ -74,7 +75,7 @@ function connectToEmailServer(imapConfiguration) {
     });
 }
 
-function fetchEmails(imap, emailIds) {
+ function fetchEmails(imap, emailIds) {
 
 
     const emitter = new EventEmitter();
@@ -93,7 +94,8 @@ function fetchEmails(imap, emailIds) {
             }
         })
         .once('error', err => {
-            emitter.emit('error', error);
+            console.log('Emited error');
+            emitter.emit('error', err);
         })
         .once('end', () => emitter.emit('end'));
 
@@ -202,9 +204,7 @@ async function getAttachmentStream(mailId, attachmentPartId, encoding, imap) {
 
     
     return getDecodedStream(dataStream, encoding);
-    /* if (err.message === 'UNKNOW ENCODING') {
-        return reject(new Error('INVALID FILE'));
-    } */
+   
 }
 
 function findAttachmentParts(struct, attachments) {
@@ -226,21 +226,20 @@ function toUpper(thing) { return thing && thing.toUpperCase ? thing.toUpperCase(
 
 
 function getDecodedStream(stream, encoding) {
-
-
+    
+    encoding = toUpper(encoding)
     //stream.pipe(writeStream); this would write base64 
     //(or whatever the encondig of the attachment Is)           
     //so we have to decode the stream
-    if (toUpper(encoding) === 'BASE64') {
-        //the stream is base64 encoded, so here the stream is decode on the fly and piped to the write stream (file)              
-        return stream.pipe(base64.decode());
-        
-
-    } else if (toUpper(encoding) === 'QUOTED-PRINTABLE') {                     
-        return stream.pipe(new QuotedPrintableDecode());
-    } else {
-        throw new Error("UNKOWN ENCODING");
-    }
+    if (encoding === 'BASE64') {        
+        return combine(stream,base64.decode());       
+    }  
+    if (encoding === 'QUOTED-PRINTABLE') {                     
+        return  combine(stream, new QuotedPrintableDecode()); 
+    } 
+    
+    throw new Error("unkown encoding " + encoding);
+    
 
 }
 
