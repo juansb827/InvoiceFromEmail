@@ -92,9 +92,8 @@ const itemFields = [
 
 
 
-exports.processInvoice = async (fileLocation) => {
-
-  
+exports.extractData = async (invoiceXMLStr) => {
+  /*
   
   const invoiceStr = await new Promise((resolve, reject) => {
     fs.readFile(fileLocation, "utf8", function(err, data) {
@@ -103,14 +102,11 @@ exports.processInvoice = async (fileLocation) => {
       }
       resolve(data);
     });
-  });
+  }); */
 
-  const invoiceDom = new DOMParser().parseFromString(invoiceStr);
+  const invoiceDom = new DOMParser().parseFromString(invoiceXMLStr);
   const invoice = getInvoiceData(invoiceDom);
   return invoice;
-
- 
-
 
 }
 
