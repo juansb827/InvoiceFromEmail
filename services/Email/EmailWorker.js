@@ -83,7 +83,7 @@ async function startEmailWorker(emailAccount, connection) {
 
       try {
         const extention = attach.name.slice(-3).toUpperCase();
-        let fileURI = null;
+        let uploadInfo = null;
         let processingState = "SKIPPED";
 
         if ("PDF,XML".includes(extention)) {
@@ -94,7 +94,7 @@ async function startEmailWorker(emailAccount, connection) {
             connection
           );
 
-          fileURI = await saveStream(attachmentStream, attach.name);
+          uploadInfo = await saveStreamToS3(attachmentStream, attach.name);
           processingState = "DOWNLOADED";
 
           if (extention === "PDF") {
@@ -102,22 +102,24 @@ async function startEmailWorker(emailAccount, connection) {
           }
         }
 
-        attach.processingState = processingState;
-        attach.fileLocation = fileURI;
+        attach.processingState = processingState;        
+        attach.fileLocation = uploadInfo.fileURI;
 
         await attach.save();
 
-        logger.info("Wrote" + fileURI);
+        logger.info("Uploaded" + uploadInfo.fileURI);
       } catch (err) {
         logger.error(err);
       }
+
+
     }
   }
   
   for (email of pendingEmails) {
     for (attach of email.Attachments) {
       const extention = attach.name.slice(-3).toUpperCase();
-      if (attach.processingState === "DOWNLOADED" && extention === "XML") {
+      if (attach.processingState === 'DOWNLOADED' && extention === 'XML') {
         await putOnInvoiceProcessinQ(
           attach.fileLocation,
           email.companyId,
@@ -226,6 +228,23 @@ async function saveStream(stream, fileName) {
   });
 }
 
+async function saveStreamToS3(companyId, fileName) {
+
+  if (!companyId) {
+    throw new Error('CompanyId can not be null');
+  }
+
+  return {
+    fileURI: 'invoice-processor/3/face_F0900547176003a6a6278.xml'
+  }
+
+  return {
+    fileURI: `${bucketName}/${companyId}/${fileName}>`,
+    bucketName: bucketName,
+    fileKey: fileName
+  }
+}
+
 /** Starts a worker for each account with pending emails to process */
 async function attempToStartWorker(emailAccount) {
   const alreadyRunning = !checkIfCanStartWorker(emailAccount);
@@ -266,9 +285,16 @@ async function checkIfCanStartWorker(emailAccount) {
 }
 
 async function putOnInvoiceProcessinQ(fileLocation, companyId, attach ) {
+  const divisonIndex = fileLocation.indexOf('/');
+  const bucketName = fileLocation.slice(0, divisonIndex);
+  const fileKey = fileLocation.slice(divisonIndex + 1 );
+
 
   var payload = {
-    fileURI: fileLocation,
+    fileLocation: {
+      bucketName: bucketName,
+      fileKey: fileKey
+    }, 
     companyId: companyId,   
     attachment: {    
         id: attach.id,
@@ -278,7 +304,7 @@ async function putOnInvoiceProcessinQ(fileLocation, companyId, attach ) {
   }
 
   var params = {
-    DelaySeconds: 10,
+    DelaySeconds: 0,
     MessageAttributes: {     
     },
     MessageBody: JSON.stringify(payload), 
@@ -294,4 +320,5 @@ async function putOnInvoiceProcessinQ(fileLocation, companyId, attach ) {
   });
 }
 
-attempToStartWorker("juansb827@gmail.com");
+//attempToStartWorker("juansb827@gmail.com");
+

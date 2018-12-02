@@ -7,9 +7,9 @@ module.exports = {
     "ssl": true  ,
     // pool configuration used to pool database connections
     "pool": {
-    "max": 5,
-    "idle": 30000,
-    "acquire": 10000,
+    "max": process.env.DB_MAX_CONNECTIONS,
+    "idle": process.env.DB_IDLE_TIMEOUT,
+    "acquire": process.env.DB_ACQUIRE_TIMEOUT,
   },
     dialectOptions: {
       ssl: true

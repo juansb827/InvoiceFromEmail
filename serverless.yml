@@ -23,11 +23,11 @@ provider:
 
 
 functions:
-  hello:
-    handler: services/handler.hello
+  processInvoice:
+    handler: services/handler.processInvoice
     events:
      - http:
-         path: hello/
+         path: processInvoice/
          method: get
          cors: true
 

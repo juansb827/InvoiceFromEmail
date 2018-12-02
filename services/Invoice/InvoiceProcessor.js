@@ -13,26 +13,12 @@ const {
 
 const { Op } = Sequelize;
 
-const AWS = require("aws-sdk");
-const AWS_DEFAULT_REGION = process.env.AWS_DEFAULT_REGION;
-AWS.config.update({ region: AWS_DEFAULT_REGION });
-const s3 = new AWS.S3();
 
 
-module.exports.processInvoice = async (fileURI, attachment, companyId) => {
+
+module.exports.processInvoice = async (invoiceXML, attachment, companyId) => {
   
-   const invoiceXML = await new Promise ((resolve, reject) => {
-    var options = {
-      Bucket: "invoice-processor",
-      Key: fileURI
-    };
-    console.log('PArams', options);
-    s3.getObject(options, (err, data) => {
-      if (err) reject(err);
-      resolve(data.Body.toString());      
-    });  
-  }); 
-  
+ 
   
   if (!companyId) {
     throw new Error("companyId is required");
