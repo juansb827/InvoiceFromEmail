@@ -1,6 +1,6 @@
 "use strict";
 require("dotenv").config({ path: "./serverless.env" });
-const invoiceProcessor = require("./Invoice/InvoiceProcessor");
+const invoiceProcessor = require("./InvoiceProcessor");
 const AWS = require("aws-sdk");
 const AWS_DEFAULT_REGION = process.env.AWS_DEFAULT_REGION;
 AWS.config.update({ region: AWS_DEFAULT_REGION });
@@ -17,7 +17,6 @@ const parsedBody =  {
   attachment: { id: 98, emailId: 120 }
 } ;
 */
-
 module.exports.processInvoice = async (event, context) => {
   context.callbackWaitsForEmptyEventLoop = false;
 
@@ -59,5 +58,6 @@ module.exports.processInvoice = async (event, context) => {
 
   return response;
 };
+
 
 

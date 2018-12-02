@@ -1,6 +1,6 @@
-require("dotenv").config();
 const fs = require("fs");
 const logger = require("../../utils/logger");
+const async = require('async');
 const { Email, Attachment } = require("../../db/models");
 const { sequelize, Sequelize } = require("../../db/models");
 const ImapHelper = require("./ImapHelper/ImapHelper");
@@ -25,7 +25,8 @@ const sampleMailConf = {
 };
 
 module.exports = {
-  startEmailWorker
+  startEmailWorker,
+  attempToStartWorker
 };
 
 /**
@@ -115,19 +116,25 @@ async function startEmailWorker(emailAccount, connection) {
 
     }
   }
+
+  
   
   for (email of pendingEmails) {
     for (attach of email.Attachments) {
       const extention = attach.name.slice(-3).toUpperCase();
       if (attach.processingState === 'DOWNLOADED' && extention === 'XML') {
-        await putOnInvoiceProcessinQ(
+        await putOnInvoiceProcessinQ( //TODO async.paralel
           attach.fileLocation,
           email.companyId,
           attach
-        );
+        );   
       }
     }
   }
+
+  
+  
+
 }
 
 /**
@@ -245,7 +252,10 @@ async function saveStreamToS3(companyId, fileName) {
   }
 }
 
-/** Starts a worker for each account with pending emails to process */
+/** 
+ * There can only be a worker of the same email account at a given moment
+ * because the max # of connections to an email account is very low */
+
 async function attempToStartWorker(emailAccount) {
   const alreadyRunning = !checkIfCanStartWorker(emailAccount);
 
@@ -285,6 +295,8 @@ async function checkIfCanStartWorker(emailAccount) {
 }
 
 async function putOnInvoiceProcessinQ(fileLocation, companyId, attach ) {
+
+  
   const divisonIndex = fileLocation.indexOf('/');
   const bucketName = fileLocation.slice(0, divisonIndex);
   const fileKey = fileLocation.slice(divisonIndex + 1 );
@@ -311,12 +323,18 @@ async function putOnInvoiceProcessinQ(fileLocation, companyId, attach ) {
     QueueUrl: SQS_INVOICE_QUEUE_URL
   };
 
-  sqs.sendMessage(params, function(err, data) {
-    if (err) {
-      console.log("Error", err);
-    } else {
-      console.log("Success", data.MessageId);
-    }
+ 
+  
+  return new Promise((resolve, reject) => {
+    sqs.sendMessage(params, function(err, data) {
+      if (err) {
+        reject(err);
+      } else {
+        console.log("Success", data.MessageId);
+        resolve();
+      }
+    });
+   
   });
 }
 

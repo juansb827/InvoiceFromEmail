@@ -24,12 +24,20 @@ provider:
 
 functions:
   processInvoice:
-    handler: services/handler.processInvoice
+    handler: services/Invoice/serverlessHandler.processInvoice
     events:
      - http:
          path: processInvoice/
          method: get
          cors: true
+  processPendingEmails:
+    handler: services/Email/serverlessHandler.processPendingEmails
+    events:
+     - http:
+         path: processPendingEmails/
+         method: get
+         cors: true
+
 
 plugins:
 - serverless-offline # adding the plugin to be able to run the offline emulation    

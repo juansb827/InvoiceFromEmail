@@ -26,7 +26,7 @@ const next = function(err, req, res, next) {
 };
 
 //TODO: move to a route
-/*
+
 emailService.searchEmails( "juansb827@gmail.com",
      {
      startingDate: "September 20, 2018",
@@ -35,6 +35,7 @@ emailService.searchEmails( "juansb827@gmail.com",
 //   .then(() => EmailWorker.startEmailWorker("juansb827@gmail.com"))
   
 //EmailWorker.startEmailWorker("juansb827@gmail.com")
+/*
   .then(mailIds => {
     console.log("Finished:##", mailIds);
   })
@@ -82,7 +83,7 @@ emailService.searchEmails( "juansb827@gmail.com",
   });
 }
 /*
-for(var i=0; i< 1000; i++) {
+for(var i=0; i< 10; i++) {
   setTimeout(testProcessinQ, 50);
   
-}*/
+} */
