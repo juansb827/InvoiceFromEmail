@@ -26,12 +26,12 @@ const next = function(err, req, res, next) {
 };
 
 //TODO: move to a route
-
+/*
 emailService.searchEmails( "juansb827@gmail.com",
      {
      startingDate: "September 20, 2018",
      sender: "focuscontable@gmail.com"
- })
+ })*/
 //   .then(() => EmailWorker.startEmailWorker("juansb827@gmail.com"))
   
 //EmailWorker.startEmailWorker("juansb827@gmail.com")
@@ -63,7 +63,7 @@ emailService.searchEmails( "juansb827@gmail.com",
       fileKey: "3/face_F0900547176003a6a6278.xml"
     },
     companyId: 3,
-    attachment: { id: 98, emailId: 120 }
+   // attachment: { id: 98, emailId: 120 }
   }; 
 
   var params = {
@@ -83,7 +83,7 @@ emailService.searchEmails( "juansb827@gmail.com",
   });
 }
 /*
-for(var i=0; i< 10; i++) {
+for(var i=0; i< 1000; i++) {
   setTimeout(testProcessinQ, 50);
   
 } */

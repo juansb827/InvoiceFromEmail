@@ -20,7 +20,13 @@ module.exports.processPendingEmails = async (event, context) => {
   };
 
   const emailAccount = event.Records[0].body;
-  await emailWorker.attempToStartWorker(emailAccount);
+  try {
+    await emailWorker.attempToStartWorker(emailAccount);   
+  }catch(err ) {
+    console.error("Error in worker for account: " + emailAccount + " " + err.stack);
+    return err;
+  }
+  
   console.log('Function ends');
   return response;
  
