@@ -5,7 +5,7 @@ const { AuthenticationError, InternalError } = require('./Errors');
 
 async function test() {
 
-    const connection = await ImapHelper.getConnection({
+    let connection = await ImapHelper.getConnection({
         user: 'juansb827@gmail.com',
         password: process.env.PASS,
         host: 'imap.gmail.com',
@@ -14,7 +14,19 @@ async function test() {
     });
 
     await connection.openBoxAsync('INBOX', true);
+    await connection.end();
 
+     connection = await ImapHelper.getConnection({
+        user: 'juansb827@gmail.com',
+        password: process.env.PASS,
+        host: 'imap.gmail.com',
+        port: 993,
+        tls: true
+    });
+
+    await connection.openBoxAsync('INBOX', true);
+    await connection.end();
+    return;
     ImapHelper.fetchEmails(connection, [8857])
         .on('message', async (msg, sequenceNumber) => {
             try {
@@ -44,7 +56,7 @@ async function test() {
         })
         .on('end', () => {
             console.log("#################################Fetching Emails Ended");
-            //connection.end();
+            
         })
 
 
@@ -74,7 +86,7 @@ async function testError() {
     }
 
 }
-testError();
+//testError();
 
 
-//test().catch(err => console.log('Error con', err));
+test().catch(err => console.log('Error con', err));

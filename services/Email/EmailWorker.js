@@ -1,6 +1,6 @@
-require("dotenv").config();
 const fs = require("fs");
 const logger = require("../../utils/logger");
+const async = require("async");
 const { Email, Attachment } = require("../../db/models");
 const { sequelize, Sequelize } = require("../../db/models");
 const ImapHelper = require("./ImapHelper/ImapHelper");
@@ -25,7 +25,8 @@ const sampleMailConf = {
 };
 
 module.exports = {
-  startEmailWorker
+  startEmailWorker,
+  attempToStartWorker
 };
 
 /**
@@ -83,7 +84,7 @@ async function startEmailWorker(emailAccount, connection) {
 
       try {
         const extention = attach.name.slice(-3).toUpperCase();
-        let fileURI = null;
+        let uploadInfo = null;
         let processingState = "SKIPPED";
 
         if ("PDF,XML".includes(extention)) {
@@ -94,7 +95,7 @@ async function startEmailWorker(emailAccount, connection) {
             connection
           );
 
-          fileURI = await saveStream(attachmentStream, attach.name);
+          uploadInfo = await saveStreamToS3(attachmentStream, attach.name);
           processingState = "DOWNLOADED";
 
           if (extention === "PDF") {
@@ -103,22 +104,23 @@ async function startEmailWorker(emailAccount, connection) {
         }
 
         attach.processingState = processingState;
-        attach.fileLocation = fileURI;
+        attach.fileLocation = uploadInfo.fileURI;
 
         await attach.save();
 
-        logger.info("Wrote" + fileURI);
+        logger.info("Uploaded" + uploadInfo.fileURI);
       } catch (err) {
         logger.error(err);
       }
     }
   }
-  
-  for (email of pendingEmails) {
+
+  for (email of pendingEmails) {    
     for (attach of email.Attachments) {
       const extention = attach.name.slice(-3).toUpperCase();
       if (attach.processingState === "DOWNLOADED" && extention === "XML") {
         await putOnInvoiceProcessinQ(
+          //TODO async.parallel
           attach.fileLocation,
           email.companyId,
           attach
@@ -226,72 +228,90 @@ async function saveStream(stream, fileName) {
   });
 }
 
-/** Starts a worker for each account with pending emails to process */
+async function saveStreamToS3(companyId, fileName) {
+  if (!companyId) {
+    throw new Error("CompanyId can not be null");
+  }
+
+  return {
+    fileURI: "invoice-processor/3/face_F0900547176003a6a6278.xml"
+  };
+
+  return {
+    fileURI: `${bucketName}/${companyId}/${fileName}>`,
+    bucketName: bucketName,
+    fileKey: fileName
+  };
+}
+
+/**
+ * There can only be a worker of the same email account at a given moment
+ * because the max # of connections to an email account is very low */
+
 async function attempToStartWorker(emailAccount) {
-  const alreadyRunning = !checkIfCanStartWorker(emailAccount);
+  const alreadyRunning = false; //;await checkIfRunning(emailAccount);
 
   if (alreadyRunning) {
     logger.info("Worker already running for :" + emailAccount);
     return;
   }
 
-  try {
-    logger.info("Started worker for account: " + emailAccount);
-    const connection = await ImapHelper.getConnection(sampleMailConf);
-    await connection.openBoxAsync("INBOX", true);
-    await startEmailWorker(emailAccount, connection);
-    logger.info("Ended worker for account: " + emailAccount);
-    await connection.end();
-    await sequelize.close();
-  } catch (err) {
-    logger.error(
-      "Error in worker for account: " + emailAccount + " " + err.stack
-    );
-  }
+  logger.info("Started worker for account: " + emailAccount);
+  const connection = await ImapHelper.getConnection(sampleMailConf);
+  await connection.openBoxAsync("INBOX", true);
+  await startEmailWorker(emailAccount, connection);
+  logger.info("Ended worker for account: " + emailAccount);
+  await connection.end();
 }
 
 //TODO: move logic to REDIS to make this an stateless application
-async function checkIfCanStartWorker(emailAccount) {
+async function checkIfRunning(emailAccount) {
   const limit = 1 * 60 * 1000; // 1 min
   if (activeWorkers[emailAccount]) {
     const expirationTime = activeWorkers[emailAccount];
     const current = new Date().getTime();
     if (expirationTime > current) {
-      return false;
+      //Still running
+      return true;
     }
   }
 
   activeWorkers[emailAccount] = new Date().getTime() + limit;
-  return true;
+  return false;
 }
 
-async function putOnInvoiceProcessinQ(fileLocation, companyId, attach ) {
+async function putOnInvoiceProcessinQ(fileLocation, companyId, attach) {
+  const divisonIndex = fileLocation.indexOf("/");
+  const bucketName = fileLocation.slice(0, divisonIndex);
+  const fileKey = fileLocation.slice(divisonIndex + 1);
 
   var payload = {
-    fileURI: fileLocation,
-    companyId: companyId,   
-    attachment: {    
-        id: attach.id,
-        emailId: attach.emailId
+    fileLocation: {
+      bucketName: bucketName,
+      fileKey: fileKey
+    },
+    companyId: companyId,
+    attachment: {
+      id: attach.id,
+      emailId: attach.emailId
     }
-      
-  }
+  };
 
   var params = {
-    DelaySeconds: 10,
-    MessageAttributes: {     
-    },
-    MessageBody: JSON.stringify(payload), 
+    DelaySeconds: 0,
+    MessageAttributes: {},
+    MessageBody: JSON.stringify(payload),
     QueueUrl: SQS_INVOICE_QUEUE_URL
   };
 
-  sqs.sendMessage(params, function(err, data) {
-    if (err) {
-      console.log("Error", err);
-    } else {
-      console.log("Success", data.MessageId);
-    }
+  return new Promise((resolve, reject) => {
+    sqs.sendMessage(params, function(err, data) {
+      if (err) {
+        reject(err);
+      } else {
+        console.log("Success", data.MessageId);
+        resolve();
+      }
+    });
   });
 }
-
-attempToStartWorker("juansb827@gmail.com");
