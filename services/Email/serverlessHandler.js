@@ -1,7 +1,7 @@
 "use strict";
 require("dotenv").config({ path: "./serverless.env" });
 
-const emailWorker = require('./EmailWorker.js');
+const workerManager = require('./workerManager');
 
 const AWS = require("aws-sdk");
 const AWS_DEFAULT_REGION = process.env.AWS_DEFAULT_REGION;
@@ -14,14 +14,13 @@ module.exports.processPendingEmails = async (event, context) => {
   const response = {
     statusCode: 200,
     body: JSON.stringify({
-      message: "SQS event processed.",
-      input: event
+      message: "SQS event processed."      
     })
   };
 
-  const emailAccount = event.Records[0].body;
+  const emailAccount = event.Records[0].body;//'juansb827@gmail.com' //
   try {
-    await emailWorker.attempToStartWorker(emailAccount);   
+    await workerManager.attempToStartWorker(emailAccount);   
   }catch(err ) {
     console.error("Error in worker for account: " + emailAccount + " " + err.stack);
     return err;
