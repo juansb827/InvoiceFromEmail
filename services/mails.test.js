@@ -26,19 +26,19 @@ const next = function(err, req, res, next) {
 };
 
 //TODO: move to a route
-/*
+
 emailService.searchEmails( "juansb827@gmail.com",
      {
      startingDate: "September 20, 2018",
      sender: "focuscontable@gmail.com"
- })*/
+ })
 //   .then(() => EmailWorker.startEmailWorker("juansb827@gmail.com"))
   
 //EmailWorker.startEmailWorker("juansb827@gmail.com")
 /*
   .then(mailIds => {
     console.log("Finished:##", mailIds);
-  })
+  })*/
   .catch(error => {
     if (error.originalError instanceof emailErrors.AuthenticationError) {
       error.statusCode = 400;
@@ -51,7 +51,7 @@ emailService.searchEmails( "juansb827@gmail.com",
     }
     next(error);
   });
-*/
+
 
   
 
@@ -83,7 +83,6 @@ emailService.searchEmails( "juansb827@gmail.com",
   });
 }
 /*
-for(var i=0; i< 1000; i++) {
-  setTimeout(testProcessinQ, 50);
-  
+for(var i=0; i< 10; i++) {
+  setTimeout(testProcessinQ, 50);  
 } */

@@ -13,20 +13,11 @@ const sqs = new AWS.SQS({ apiVersion: "2012-11-05" });
 //Invoice Processing Q
 const SQS_INVOICE_QUEUE_URL = process.env.SQS_INVOICE_QUEUE_URL;
 
-const activeWorkers = {}; //TODO: MOVE TO REDIS
 
-const sampleMailConf = {
-  user: "juansb827@gmail.com",
-  password: process.env.PASS,
-  host: "imap.gmail.com",
-  port: 993,
-  tls: true,
-  maxConnections: 5
-};
 
 module.exports = {
-  startEmailWorker,
-  attempToStartWorker
+  startEmailWorker
+  
 };
 
 /**
@@ -244,41 +235,8 @@ async function saveStreamToS3(companyId, fileName) {
   };
 }
 
-/**
- * There can only be a worker of the same email account at a given moment
- * because the max # of connections to an email account is very low */
 
-async function attempToStartWorker(emailAccount) {
-  const alreadyRunning = false; //;await checkIfRunning(emailAccount);
 
-  if (alreadyRunning) {
-    logger.info("Worker already running for :" + emailAccount);
-    return;
-  }
-
-  logger.info("Started worker for account: " + emailAccount);
-  const connection = await ImapHelper.getConnection(sampleMailConf);
-  await connection.openBoxAsync("INBOX", true);
-  await startEmailWorker(emailAccount, connection);
-  logger.info("Ended worker for account: " + emailAccount);
-  await connection.end();
-}
-
-//TODO: move logic to REDIS to make this an stateless application
-async function checkIfRunning(emailAccount) {
-  const limit = 1 * 60 * 1000; // 1 min
-  if (activeWorkers[emailAccount]) {
-    const expirationTime = activeWorkers[emailAccount];
-    const current = new Date().getTime();
-    if (expirationTime > current) {
-      //Still running
-      return true;
-    }
-  }
-
-  activeWorkers[emailAccount] = new Date().getTime() + limit;
-  return false;
-}
 
 async function putOnInvoiceProcessinQ(fileLocation, companyId, attach) {
   const divisonIndex = fileLocation.indexOf("/");

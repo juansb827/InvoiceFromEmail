@@ -6,7 +6,7 @@ const ImapHelper = require('./ImapHelper/ImapHelper');
 const MAXIMUM_GLOBAL_CONNECTIONS = 10; //maximum number of connections across all pools
 const sampleMailConf = {
     user: 'juansb827@gmail.com',
-    password: process.env.PASS,
+    xoauth2: 'dXNlcj1qdWFuc2I4MjdAZ21haWwuY29tAWF1dGg9QmVhcmVyIHlhMjkuR2x4cEJyU0xDeVhkcXlNWGpWRUU4ckViMUVRekZuUE14OUNPVE16a2J0TlUwalByUE9tRE5mTlJ5S3NVT2E5RDZ1U3RGeXlNME55SGhFWnBuUmh4Rl8xZm5ZRjNMMlVsb2VRUnlfVXgyandjRGxHb19fWXR0cGl4bzd5T19BAQE=',
     host: 'imap.gmail.com',
     port: 993,
     tls: true,
