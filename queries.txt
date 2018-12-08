@@ -9,6 +9,7 @@ source /bin/activate
 //TODO
 //Check errors in mails/processMailsAsync
 //Improve Error Logging
+//Use Caching for confParameters 
 
 SELECT * FROM "Emails"
 SELECT * FROM "Attachments" order by "emailId"
@@ -22,3 +23,13 @@ delete FROM "Invoices";
 delete  from "InvoiceItems";
 
 SELECT * FROM "Attachments" AS "Attachment" WHERE "Attachment"."processingState" != 'DONE' AND "Attachment"."processingState" IS NOT NULL AND "Attachment"."emailId" = 13;
+
+//Rencryption query
+UPDATE "EmailAccounts" set "password" = re_encrypted.password, "tokenInfo" = re_encrypted.tokenInfo   FROM (SELECT 
+    PGP_SYM_ENCRYPT(PGP_SYM_DECRYPT("password"::bytea, 'TEST_SECRET_KEY2'),'TEST_SECRET_KEY3') as password,
+    PGP_SYM_ENCRYPT(PGP_SYM_DECRYPT("tokenInfo"::bytea, 'TEST_SECRET_KEY2'),'TEST_SECRET_KEY3') as tokenInfo FROM "EmailAccounts")  as re_encrypted
+	
+	
+
+SELECT     PGP_SYM_DECRYPT("password"::bytea, 'TEST_SECRET_KEY3') as name,	
+	 PGP_SYM_DECRYPT("tokenInfo"::bytea, 'TEST_SECRET_KEY3') as age FROM "EmailAccounts"

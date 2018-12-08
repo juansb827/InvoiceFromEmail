@@ -12,30 +12,33 @@ const LOCK_DURATION = 20;
  * There can only be a worker of the same email account at a given moment
  * because the max # of connections to an email account is very low */
 module.exports.attempToStartWorker = async (
+  emailAddress,
   emailAccountId,
   userId,
   secretKey
 ) => {
+
   getRedisConnection();
+
   if (!(await canStart(emailAccountId))) {
-    logger.info("Worker already running for :" + emailAccountId);
+    logger.info(`Worker already running for: '${emailAccountId}:${emailAddress}'`);
     return;
   }
 
   const renewInterval = setInterval(async () => {
-    logger.info(`Readquiring lock for '${emailAccountId}'`);
+    logger.info(`Readquiring lock for '${emailAccountId}:${emailAddress}'`);
     await renewLock(emailAccountId);
   }, 15000);
 
   try {
     const accountInfo = await emailAccountService.getDecryptedCredentials(
-      15,
-      1,
-      "TEST_SECRET_KEY"
+      emailAccountId,
+      userId,
+      secretKey
     );
 
     logger.info(
-      `Started worker for account : ${accountInfo.id}:${accountInfo.address} `
+      `Started worker for account : '${emailAccountId}:${emailAddress}' `
     );
 
     const connection = await ImapHelper.getConnection({
@@ -45,17 +48,18 @@ module.exports.attempToStartWorker = async (
       tls: true,
       xoauth2: accountInfo.tokenInfo.xoauth2_token
     });
+
     await connection.openBoxAsync("INBOX", true);
     await startEmailWorker(accountInfo.address, connection);
     logger.info(
-      `Ended worker for account: ${accountInfo.id}:${accountInfo.address} `
+      `Ended worker for account: '${emailAccountId}:${emailAddress}'`
     );
     await connection.end();
   } catch (err) {
     throw err;
   } finally {
     clearInterval(renewInterval);
-    logger.info(`Releasing lock for '${emailAccountId}'`);
+    logger.info(`Releasing lock for '${emailAccountId}:${emailAddress}'`);
     await releaseLock(emailAccountId);
   }
 };
@@ -70,14 +74,14 @@ function getRedisConnection() {
   }
 }
 
-async function canStart(emailAccount) {
-  if (!emailAccount) {
+async function canStart(lockId) {
+  if (!lockId) {
     throw new Error("Email account can not be null");
   }
   // emailWorkers:juansb827@gmail.com
   let canStart = await redis.setAsync(
-    `emailWorkers:${emailAccount}`,
-    425235,
+    `emailWorkers:${lockId}`,
+    'email worker lock',
     "NX",
     "EX",
     LOCK_DURATION
@@ -86,16 +90,16 @@ async function canStart(emailAccount) {
   return canStart;
 }
 
-async function renewLock(emailAccount) {
+async function renewLock(lockId) {
   return await redis.setAsync(
-    `emailWorkers:${emailAccount}`,
-    "lol",
+    `emailWorkers:${lockId}`,
+    'email worker lock',
     "XX",
     "EX",
     LOCK_DURATION
   );
 }
 
-async function releaseLock(emailAccount) {
-  return await redis.delAsync(`emailWorkers:${emailAccount}`);
+async function releaseLock(lockId) {
+  return await redis.delAsync(`emailWorkers:${lockId}`);
 }

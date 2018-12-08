@@ -82,53 +82,53 @@ async function getDecryptedCredentials(id, userId, secretKey) {
   });
 
   if (accountSettings.authMethod === "XOAUTH2") {
-        const currentTokenInfo = JSON.parse(accountSettings.tokenInfo);
-        const newTokenInfo = await updateExpiredToken(accountSettings.address, currentTokenInfo);   
-        if (currentTokenInfo.expiry_date !== newTokenInfo.expiry_date) {
-            accountSettings.tokenInfo = 
-                sequelize.fn("PGP_SYM_ENCRYPT", JSON.stringify(newTokenInfo), secretKey) ;
-            await accountSettings.save();
-            
-        }
-        accountSettings.tokenInfo = newTokenInfo; 
-  }  
-  return accountSettings.get({ simple: true})
-   
+    const currentTokenInfo = JSON.parse(accountSettings.tokenInfo);
+    const newTokenInfo = await updateExpiredToken(
+      accountSettings.address,
+      currentTokenInfo
+    );
+    if (currentTokenInfo.expiry_date !== newTokenInfo.expiry_date) {
+      accountSettings.tokenInfo = sequelize.fn(
+        "PGP_SYM_ENCRYPT",
+        JSON.stringify(newTokenInfo),
+        secretKey
+      );
+      await accountSettings.save();
+      console.log("Token expired, requested a new one");
+    } else {
+      console.log("Token still valid, Using existing token");
+    }
+    accountSettings.tokenInfo = newTokenInfo;
+  }
+  return accountSettings.get({ simple: true });
 }
 
 /**
- *  If tokenInfo.xoauth2_token is expired, fetches a new token and saves it into the db. 
+ *  If tokenInfo.xoauth2_token is expired, fetches a new token and saves it into the db.
  */
 async function updateExpiredToken(user, tokenInfo) {
-    
-    const clientInfo = clientCredentials.installed;
-    const expired = tokenInfo.expiry_date <= Date.now();
-    if (!expired) return tokenInfo;
+  const clientInfo = clientCredentials.installed;
+  const expired = tokenInfo.expiry_date <= Date.now();
+  if (!expired) return tokenInfo;
 
-    const xoauth2gen = xoauth2.createXOAuth2Generator({
-      user: user,
-      clientId: clientInfo.client_id,
-      clientSecret: clientInfo.client_secret,
-      refreshToken: tokenInfo.refresh_token        
+  const xoauth2gen = xoauth2.createXOAuth2Generator({
+    user: user,
+    clientId: clientInfo.client_id,
+    clientSecret: clientInfo.client_secret,
+    refreshToken: tokenInfo.refresh_token
+  });
+
+  const new_xoauth2 = await new Promise((resolve, reject) => {
+    xoauth2gen.getToken((err, token) => {
+      if (err) {
+        return reject(err);
+      }
+      resolve(token);
     });
+  });
 
-    const new_xoauth2 = await new Promise((resolve, reject) => {
-        xoauth2gen.getToken((err, token) => { 
-          if (err) {
-            return reject(err);
-          }
-          resolve(token);
-        });
-      });
-
-    return {
-        xoauth2_token: new_xoauth2,
-        expiry_date: xoauth2gen.timeout 
-    }
-      
-  
-      
-
-    
+  return {
+    xoauth2_token: new_xoauth2,
+    expiry_date: xoauth2gen.timeout
+  };
 }
-

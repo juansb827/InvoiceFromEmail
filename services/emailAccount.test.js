@@ -6,7 +6,7 @@ async function test() {
     .createEmailAccount(1, 'juansb827@gmail.com', 'GMAIL', 
         'XOAUTH2', 'TEST_SECRET_KEY', 'SAMPLEPASS12345', token            
     )*/
-    const accountFound = await emailAccount.getDecryptedCredentials(15, 1, 'TEST_SECRET_KEY');
+    const accountFound = await emailAccount.getDecryptedCredentials(15, 1, '');
     console.log('FOund', accountFound);
     //console.log("FOund", accountFound.get({plain: true}) );
     
