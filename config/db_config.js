@@ -1,6 +1,7 @@
 require('dotenv').config()
 module.exports = {
   "development": {
+    logging: false,
     "url": process.env.DB_CONNECTION_URL,
     "dialect": "postgres",
     "ssl": true  ,
@@ -8,7 +9,7 @@ module.exports = {
     "pool": {
     "max": process.env.DB_MAX_CONNECTIONS,
     "idle": process.env.DB_IDLE_TIMEOUT,
-    "acquire": process.env.DB_ACQUIRE_TIMEOUT,
+    "acquire": process.env.DB_ACQUIRE_TIMEOUT    
   },
     dialectOptions: {
       ssl: true

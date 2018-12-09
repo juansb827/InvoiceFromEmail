@@ -9,6 +9,12 @@
             "request": "launch",
             "name": "Launch Program",
             "program": "${workspaceFolder}/services/Email/serverlessHandler.test.js" //Invoice/InvoiceProcessor.js
+        },
+        {
+            "type": "node",
+            "request": "attach",
+            "name": "Attach ",
+            "port": 9229
         }
     ]
 }

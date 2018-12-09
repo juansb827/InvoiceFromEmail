@@ -83,14 +83,18 @@ async function getDecryptedCredentials(id, userId, secretKey) {
 
   if (accountSettings.authMethod === "XOAUTH2") {
     const currentTokenInfo = JSON.parse(accountSettings.tokenInfo);
-    const newTokenInfo = await updateExpiredToken(
+    accountSettings.tokenInfo = currentTokenInfo;
+    const newToken = await updateExpiredToken(
       accountSettings.address,
       currentTokenInfo
     );
-    if (currentTokenInfo.expiry_date !== newTokenInfo.expiry_date) {
+    
+    if (currentTokenInfo.expiry_date !== newToken.expiry_date) {
+      currentTokenInfo.access_token = newToken.access_token;
+      currentTokenInfo.expiry_date = newToken.expiry_date;
       accountSettings.tokenInfo = sequelize.fn(
         "PGP_SYM_ENCRYPT",
-        JSON.stringify(newTokenInfo),
+        JSON.stringify(currentTokenInfo),
         secretKey
       );
       await accountSettings.save();
@@ -98,7 +102,7 @@ async function getDecryptedCredentials(id, userId, secretKey) {
     } else {
       console.log("Token still valid, Using existing token");
     }
-    accountSettings.tokenInfo = newTokenInfo;
+    
   }
   return accountSettings.get({ simple: true });
 }
@@ -128,7 +132,7 @@ async function updateExpiredToken(user, tokenInfo) {
   });
 
   return {
-    xoauth2_token: new_xoauth2,
+    access_token: new_xoauth2,
     expiry_date: xoauth2gen.timeout
   };
 }

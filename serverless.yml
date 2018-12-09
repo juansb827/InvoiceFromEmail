@@ -21,6 +21,17 @@ provider:
   name: aws
   runtime: nodejs8.10
 
+iamRoleStatements:
+  - Effect: 'Allow'
+    Action: 'ssm:GetParameters'
+    Resource:
+      - 'arn:aws:ssm:us-east-1:241659268674:parameter/gapi_client_id'
+      - 'arn:aws:ssm:us-east-1:241659268674:parameter/gapi_client_secret'
+      - 'arn:aws:ssm:us-east-1:241659268674:parameter/pg_encrypt_password'    
+  - Effect: 'Allow'
+    Action: 'kms:Decrypt'  
+    Resource:
+      - 'arn:aws:kms:us-east-1:241659268674:key/a97b15e6-d94d-4c14-a51b-aa1a4454ee08'
 
 functions:
   processInvoice:

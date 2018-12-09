@@ -27,12 +27,14 @@ module.exports.processPendingEmails =  (async function (event, context)   {
     'gapi_client_secret',
     'pg_encrypt_password'
   );
-  const emailAccount = event.Records[0].body;//'juansb827@gmail.com' //
+
+  const body = JSON.parse(event.Records[0].body);//'juansb827@gmail.com' //
 
   try {
-    await workerManager.attempToStartWorker(emailAccount, 15, 1, confParameters.pg_encrypt_password);   
+    await workerManager.attempToStartWorker(body.emailAccount, body.emailAccountId,
+       body.userId, confParameters.pg_encrypt_password);   
   }catch(err ) {
-    console.error("Error in worker for account: " + emailAccount + " " + err.stack);
+    console.error("Error in worker for account: " + body.emailAccount + " " + err.stack);
     return err;
   }
   

@@ -46,7 +46,7 @@ module.exports.attempToStartWorker = async (
       host: "imap.gmail.com",
       port: 993,
       tls: true,
-      xoauth2: accountInfo.tokenInfo.xoauth2_token
+      xoauth2: accountInfo.tokenInfo.access_token
     });
 
     await connection.openBoxAsync("INBOX", true);
