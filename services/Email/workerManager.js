@@ -1,6 +1,6 @@
 const logger = require("../../utils/logger");
 const { startEmailWorker } = require("./EmailWorker");
-const ImapHelper = require("./ImapHelper/ImapHelper");
+const imapHelper = require("../../lib/imapHelper");
 const emailAccountService = require("./../emailAccount");
 let createClient = require("./../../cache/redis");
 let redis = null;
@@ -41,7 +41,7 @@ module.exports.attempToStartWorker = async (
       `Started worker for account : '${emailAccountId}:${emailAddress}' `
     );
 
-    const connection = await ImapHelper.getConnection({
+    const connection = await imapHelper.getConnection({
       user: accountInfo.address,
       host: "imap.gmail.com",
       port: 993,

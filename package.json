@@ -1,5 +1,5 @@
 {
-  "name": "invoicefromemail",
+  "name": "invoiceProcessor",
   "version": "1.0.0",
   "description": "",
   "main": "app.js",
@@ -18,11 +18,7 @@
     "debug": "^4.1.0",
     "dotenv": "^6.0.0",
     "googleapis": "^27.0.0",
-    "imap": "^0.8.19",
-    "mailparser": "^2.3.4",
-    "multipipe": "^2.0.3",
     "pg": "^7.4.3",
-    "quoted-printable": "^1.0.1",
     "redis": "^2.8.0",
     "sequelize": "^4.39.0",
     "sequelize-auto-migrations": "^1.0.2",
@@ -31,7 +27,8 @@
     "winston": "^3.1.0",
     "xmldom": "^0.1.27",
     "xoauth2": "^1.2.0",
-    "xpath.js": "^1.1.0"
+    "xpath.js": "^1.1.0",
+    "imapHelper": "file:lib/imapHelper"
   },
   "devDependencies": {
     "chai": "^4.2.0",

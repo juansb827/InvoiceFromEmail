@@ -9,10 +9,10 @@ const async = require("async");
 const { sequelize, Sequelize } = require("../db/models");
 const Op = Sequelize.Op;
 const { Email, Attachment } = require("../db/models");
-const EmailHelper = require("./Email/ImapHelper/ImapHelper");
-
+const EmailHelper = require('../lib/imapHelper/imapHelper');
+const emailErrors = require("./../lib/imapHelper/Errors");
 const connectionsHelper = require("./Email/ImapConnections");
-const emailErrors = require("./Email/ImapHelper/Errors");
+
 
 const logger = require("../utils/logger");
 

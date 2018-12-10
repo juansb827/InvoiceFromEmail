@@ -83,7 +83,7 @@ async function getDecryptedCredentials(id, userId, secretKey) {
 
   if (accountSettings.authMethod === "XOAUTH2") {
     const currentTokenInfo = JSON.parse(accountSettings.tokenInfo);
-    accountSettings.tokenInfo = currentTokenInfo;
+    
     const newToken = await updateExpiredToken(
       accountSettings.address,
       currentTokenInfo
@@ -98,11 +98,12 @@ async function getDecryptedCredentials(id, userId, secretKey) {
         secretKey
       );
       await accountSettings.save();
+     
       console.log("Token expired, requested a new one");
     } else {
       console.log("Token still valid, Using existing token");
     }
-    
+    accountSettings.tokenInfo = currentTokenInfo;
   }
   return accountSettings.get({ simple: true });
 }

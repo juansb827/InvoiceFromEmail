@@ -1,0 +1,12 @@
+{
+    "name": "imapHelper",
+    "version": "0.0.1",
+    "private": true,
+    "main": "./index",
+    "dependencies": {
+      "imap": "0.8.19",
+      "quoted-printable": "1.0.1",
+      "mailparser": "2.3.4",
+      "multipipe": "2.0.3"
+    }
+  }

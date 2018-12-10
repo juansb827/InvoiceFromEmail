@@ -3,7 +3,7 @@ const logger = require("../../utils/logger");
 const async = require("async");
 const { Email, Attachment } = require("../../db/models");
 const { sequelize, Sequelize } = require("../../db/models");
-const ImapHelper = require("./ImapHelper/ImapHelper");
+const imapHelper = require("./../../lib/imapHelper/");
 const Op = Sequelize.Op;
 
 const AWS = require("aws-sdk");
@@ -79,7 +79,7 @@ async function startEmailWorker(emailAccount, connection) {
         let processingState = "SKIPPED";
 
         if ("PDF,XML".includes(extention)) {
-          const attachmentStream = await ImapHelper.getAttachmentStream(
+          const attachmentStream = await imapHelper.getAttachmentStream(
             email.uid,
             attach.partId,
             attach.encoding,
@@ -152,7 +152,7 @@ async function getEmailsData(unproccessedEmails, connection) {
 
     let remaining = unproccessedEmails.length;
     const uids = unproccessedEmails.map(mailInfo => mailInfo.uid);
-    ImapHelper.fetchEmails(connection, uids)
+    imapHelper.fetchEmails(connection, uids)
       .on("message", async message => {
         const emailModel = emailsByUid[message.uid];
 
