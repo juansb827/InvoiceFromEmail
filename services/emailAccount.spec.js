@@ -91,6 +91,8 @@ describe("EmailAccount Service", function() {
 
   //TODO: getDecryptedCredentials, it should refresh token if is expired
 });
+
+
 const emailAccount = require("./emailAccount");
 
 async function test() {

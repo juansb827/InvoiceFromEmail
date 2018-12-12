@@ -1,5 +1,4 @@
-//require("dotenv").config({ path: "./serverless.env" });
-const invoices = require("./invoices");
+const invoices = require("../../lib/invoiceUtils/invoices");
 const fs = require("fs");
 
 const {
@@ -16,7 +15,7 @@ const { Op } = Sequelize;
 
 
 
-module.exports.processInvoice = async (invoiceXML, attachment, companyId) => {
+module.exports = async (invoiceXML, attachment, companyId) => {
   
  
   
@@ -87,5 +86,3 @@ module.exports.processInvoice = async (invoiceXML, attachment, companyId) => {
     );
   }
 };
-
-//exports.processInvoice('face_F0900547176003a6a6278.xml', null, '3');

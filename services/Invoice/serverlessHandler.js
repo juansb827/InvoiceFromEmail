@@ -1,22 +1,11 @@
-"use strict";
+'use strict';
 require("dotenv").config({ path: "./serverless.env" });
-const invoiceProcessor = require("./InvoiceProcessor");
+const processInvoice = require('./processInvoice');
 const AWS = require("aws-sdk");
 const AWS_DEFAULT_REGION = process.env.AWS_DEFAULT_REGION;
 AWS.config.update({ region: AWS_DEFAULT_REGION });
 const s3 = new AWS.S3();
 
-/* EXAMPLE OF MESSAGE
-
-const parsedBody =  {
-  fileLocation: {
-    bucketName: "invoice-processor",
-    fileKey: "3/face_F0900547176003a6a6278.xml"
-  },
-  companyId: 3,
-  attachment: { id: 98, emailId: 120 }
-} ;
-*/
 module.exports.processInvoice = async (event, context) => {
   context.callbackWaitsForEmptyEventLoop = false;
 
@@ -33,7 +22,7 @@ module.exports.processInvoice = async (event, context) => {
   try {
     for (let record of event.Records) {
       const parsedBody = JSON.parse(record.body);
-
+      console.log("Processing",  parsedBody.attachment, parsedBody.companyId);
       const invoiceXML = await new Promise((resolve, reject) => {
         let options = {
           Bucket: parsedBody.fileLocation.bucketName,
@@ -45,11 +34,13 @@ module.exports.processInvoice = async (event, context) => {
         });
       });
 
-      await invoiceProcessor.processInvoice(
+      await processInvoice(
         invoiceXML,
         parsedBody.attachment,
         parsedBody.companyId
       );
+
+      console.log("Successfully processed",  parsedBody.attachment, parsedBody.companyId);
     }
   } catch (err) {
     console.error(err);

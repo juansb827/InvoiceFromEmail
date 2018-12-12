@@ -7,6 +7,8 @@
       "imap": "0.8.19",
       "quoted-printable": "1.0.1",
       "mailparser": "2.3.4",
-      "multipipe": "2.0.3"
+      "multipipe": "2.0.3",
+      "base64-stream": "0.1.3",
+      "debug": "4.1.0"
     }
   }

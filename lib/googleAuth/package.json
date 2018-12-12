@@ -1,0 +1,9 @@
+{
+    "name": "googleAuth",
+    "version": "0.0.1",
+    "private": true,
+    "main": "./authUtils",
+    "dependencies": {
+        "googleapis": "27.0.0"
+    }
+  }

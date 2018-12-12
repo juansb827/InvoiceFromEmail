@@ -1,13 +1,20 @@
+'use strict'
 const xoauth2 = require("xoauth2");
 const { sequelize, Sequelize } = require("../db/models");
 const Op = Sequelize.Op;
+const googleAuth = require("googleAuth");
+
 const { EmailAccount } = require("../db/models");
 const clientCredentials = require("./../credentials.json");
+const imapHelper = require('imapHelper');
 
 module.exports = {
   createEmailAccount,
-  getDecryptedCredentials
+  getDecryptedCredentials,
+  testConnectionAndCreate
 };
+
+
 
 async function createEmailAccount(
   userId,
@@ -42,7 +49,7 @@ async function createEmailAccount(
       break;
   }
 
-  return EmailAccount.create({
+  const newAccount = await EmailAccount.create({
     address,
     provider,
     authMethod,
@@ -54,6 +61,7 @@ async function createEmailAccount(
     ),
     userId
   });
+  return newAccount.get({ simple: true });
 }
 
 async function getDecryptedCredentials(id, userId, secretKey) {
@@ -108,6 +116,85 @@ async function getDecryptedCredentials(id, userId, secretKey) {
   return accountSettings.get({ simple: true });
 }
 
+/**
+ * Checks 
+ */
+async function testConnectionAndCreate(contextObject) {
+
+  const {
+    userId,
+    address,
+    provider,
+    authType,
+    password,
+    verificationCode
+  } = contextObject.accountData;
+
+
+  const client = googleAuth.createoAuth2Client(
+    contextObject.config.gapi_client_id,//contextObject
+    contextObject.config.gapi_client_secret,
+    "urn:ietf:wg:oauth:2.0:oob"
+  );
+
+  let token = null;
+  try {
+    token = await googleAuth.getToken(client, verificationCode);
+  } catch(error) {
+    let message = error.message;
+    if (error.code) {
+      message = JSON.stringify(error.response.data);
+    }
+    
+    const err = new Error('Could not retrieve the token using the given verification code, ' + message );
+    err.statusCode = 400;
+    throw err;
+  }
+  
+  var xoauth2gen = xoauth2.createXOAuth2Generator({
+    user: address
+  });
+  const xoauth2Token = xoauth2gen.buildXOAuth2Token(token.access_token);
+
+  const connectionConf = imapHelper.getConfiguration(
+    address,
+    provider,
+    authType,
+    xoauth2Token
+  );
+
+  let connection;
+  try {
+    connection = await imapHelper.getConnection(connectionConf);
+  } catch (error) {     
+    console.log('LoginError', error.stack );
+    const err = new Error("Could not connect to the email account " + error.message );
+    err.statusCode = 400;
+    throw err;
+  } finally {
+    if (connection) {
+      await connection.end();
+    }
+  }
+
+  console.log("TOKEN", token);
+  token.access_token = xoauth2Token;
+
+  const newAccount = await createEmailAccount(
+    userId,
+    address,
+    provider,
+    authType,
+    contextObject.config.encrypt_password,
+    password,
+    token
+  );
+
+  delete newAccount.password;
+  delete newAccount.tokenInfo;
+  return newAccount;
+  
+}
 /**
  *  If tokenInfo.xoauth2_token is expired, fetches a new token and saves it into the db.
  */

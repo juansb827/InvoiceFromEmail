@@ -41,13 +41,11 @@ module.exports.attempToStartWorker = async (
       `Started worker for account : '${emailAccountId}:${emailAddress}' `
     );
 
-    const connection = await imapHelper.getConnection({
-      user: accountInfo.address,
-      host: "imap.gmail.com",
-      port: 993,
-      tls: true,
-      xoauth2: accountInfo.tokenInfo.access_token
-    });
+    const connectionConf = 
+      imapHelper.getConfiguration(accountInfo.address, 
+        accountInfo.provider, accountInfo.authType, accountInfo.tokenInfo.access_token );
+        
+    const connection = await imapHelper.getConnection(connectionConf);
 
     await connection.openBoxAsync("INBOX", true);
     await startEmailWorker(accountInfo.address, connection);
