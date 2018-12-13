@@ -1,4 +1,7 @@
 require('dotenv').config();
+require('./lib/parameterStore').init(['gapi_client_id',
+'gapi_client_secret',
+'pg_encrypt_password']), 60 * 5;
 const express = require("express");
 const bodyParser = require("body-parser");
 

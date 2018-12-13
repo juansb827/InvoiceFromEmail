@@ -8,7 +8,7 @@
             "type": "node",
             "request": "launch",
             "name": "Launch Program",
-            "program": "${workspaceFolder}/bin/www" //Invoice/InvoiceProcessor.js//services/Email/serverlessHandler.test.js
+            "program": "${workspaceFolder}/services/Email/serverlessHandler.test.js" //Invoice/InvoiceProcessor.js//
         },
         {
             "type": "node",

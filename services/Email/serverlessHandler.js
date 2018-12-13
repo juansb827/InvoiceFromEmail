@@ -3,7 +3,8 @@ require("dotenv").config({ path: "./serverless.env" });
 
 const AWS          = require("aws-sdk");
 const workerManager = require('./workerManager');
-const { getConfParameters } = require('./../../lib/confParameters');
+const parameterStore = require('../../lib/parameterStore');
+parameterStore.init(['gapi_client_id','gapi_client_secret', 'pg_encrypt_password']);
 
 
 const AWS_DEFAULT_REGION = process.env.AWS_DEFAULT_REGION;
@@ -21,13 +22,9 @@ module.exports.processPendingEmails =  (async function (event, context)   {
       message: "SQS event processed."      
     })
   };
-
-  confParameters = await getConfParameters(
-    'gapi_client_id',
-    'gapi_client_secret',
-    'pg_encrypt_password'
-  );
-
+  
+  const confParameters = await parameterStore.getParameters();
+   
   const body = JSON.parse(event.Records[0].body);//'juansb827@gmail.com' //
 
   try {

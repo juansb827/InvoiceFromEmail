@@ -65,6 +65,7 @@ describe("EmailAccount Service", function() {
     });
 
     it("should encrypt the token and password", async function() {
+      
         await emailAccount.createEmailAccount(
             accountConf.userId,
             accountConf.address,
