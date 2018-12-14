@@ -1,6 +1,8 @@
 const fs = require("fs");
 const logger = require("../../utils/logger");
 const async = require("async");
+const crypto = require('crypto');
+const stream = require('stream');
 const { Email, Attachment } = require("../../db/models");
 const { sequelize, Sequelize } = require("../../db/models");
 const imapHelper = require("./../../lib/imapHelper/");
@@ -12,12 +14,10 @@ AWS.config.update({ region: AWS_DEFAULT_REGION });
 const sqs = new AWS.SQS({ apiVersion: "2012-11-05" });
 //Invoice Processing Q
 const SQS_INVOICE_QUEUE_URL = process.env.SQS_INVOICE_QUEUE_URL;
-
-
+const S3_INVOICE_BUCKET_NAME = "invoice-processor";
 
 module.exports = {
   startEmailWorker
-  
 };
 
 /**
@@ -75,7 +75,7 @@ async function startEmailWorker(emailAccount, connection) {
 
       try {
         const extention = attach.name.slice(-3).toUpperCase();
-        let uploadInfo = null;
+        
         let processingState = "SKIPPED";
 
         if ("PDF,XML".includes(extention)) {
@@ -85,28 +85,28 @@ async function startEmailWorker(emailAccount, connection) {
             attach.encoding,
             connection
           );
-
-          uploadInfo = await saveStreamToS3(attachmentStream, attach.name);
+          let fileURI = await uploadToS3(attachmentStream, email.companyId, attach.name);         
+        
           processingState = "DOWNLOADED";
-
           if (extention === "PDF") {
             processingState = "DONE";
           }
+          attach.fileLocation = fileURI;
         }
 
         attach.processingState = processingState;
-        attach.fileLocation = uploadInfo.fileURI;
+        
 
         await attach.save();
 
-        logger.info("Uploaded" + uploadInfo.fileURI);
+        
       } catch (err) {
         logger.error(err);
       }
     }
   }
 
-  for (email of pendingEmails) {    
+  for (email of pendingEmails) {
     for (attach of email.Attachments) {
       const extention = attach.name.slice(-3).toUpperCase();
       if (attach.processingState === "DOWNLOADED" && extention === "XML") {
@@ -152,7 +152,8 @@ async function getEmailsData(unproccessedEmails, connection) {
 
     let remaining = unproccessedEmails.length;
     const uids = unproccessedEmails.map(mailInfo => mailInfo.uid);
-    imapHelper.fetchEmails(connection, uids)
+    imapHelper
+      .fetchEmails(connection, uids)
       .on("message", async message => {
         const emailModel = emailsByUid[message.uid];
 
@@ -219,24 +220,33 @@ async function saveStream(stream, fileName) {
   });
 }
 
-async function saveStreamToS3(companyId, fileName) {
+async function uploadToS3(fileStream, companyId, fileName) {
+ 
+
+
   if (!companyId) {
     throw new Error("CompanyId can not be null");
   }
 
-  return {
-    fileURI: "invoice-processor/3/face_F0900547176003a6a6278.xml"
-  };
+  const s3 = new AWS.S3();
+  const pass = new stream.PassThrough();
+  const uuid = crypto.randomBytes(16).toString("hex");
+  const fileKey = `${companyId}/${uuid}-${fileName}`;
 
-  return {
-    fileURI: `${bucketName}/${companyId}/${fileName}>`,
-    bucketName: bucketName,
-    fileKey: fileName
-  };
+  const promise = s3.upload({ 
+    Bucket: S3_INVOICE_BUCKET_NAME, 
+     Key: fileKey,    
+     Body: pass
+  }).promise();
+
+  fileStream.pipe(pass);
+  await promise;
+  
+  return `${S3_INVOICE_BUCKET_NAME}/${fileKey}`
+  
+
+
 }
-
-
-
 
 async function putOnInvoiceProcessinQ(fileLocation, companyId, attach) {
   const divisonIndex = fileLocation.indexOf("/");
