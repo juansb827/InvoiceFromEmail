@@ -9,6 +9,7 @@
             "request": "launch",
             "name": "Launch Program",
             "program": "${workspaceFolder}/services/Email/serverlessHandler.test.js" //Invoice/InvoiceProcessor.js//
+            //services/mails.test.js
         },
         {
             "type": "node",

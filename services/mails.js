@@ -4,52 +4,71 @@ const Promise = require("bluebird");
 const crypto = require("crypto");
 const async = require("async");
 
-  
-
 const { sequelize, Sequelize } = require("../db/models");
 const Op = Sequelize.Op;
 const { Email, Attachment } = require("../db/models");
-const EmailHelper = require('../lib/imapHelper/imapHelper');
+const imapHelper = require("imapHelper");
 const emailErrors = require("./../lib/imapHelper/Errors");
-const connectionsHelper = require("./Email/ImapConnections");
-
-
+const emailAccountService = require('./emailAccount');
 const logger = require("../utils/logger");
+const parameterStore = require('../lib/parameterStore');
+const SQS_PENDING_EMAIL_QUEUE_URL = process.env.SQS_PENDING_EMAIL_QUEUE_URL;
 
-
-//const { processInvoice } = require('./Invoice/InvoiceProcessor');
-
+const AWS = require("aws-sdk");
+const AWS_DEFAULT_REGION = process.env.AWS_DEFAULT_REGION;
+AWS.config.update({ region: AWS_DEFAULT_REGION });
+const sqs = new AWS.SQS({ apiVersion: "2012-11-05" });
 
 module.exports = {
-  searchEmails,      
+  searchEmails,
   bulkRegister
-}
+};
 
- /** 
-  * searchEmails emails in the inbox and registers the ones that were not already in the db 
-  * for that account
-  * 
-  * @param emailAccount 
-  * @param searchParams 
+/**
+ * searchEmails emails in the inbox and registers the ones that were not already in the db
+ * for that account
+ *
+ * @param emailAccount
+ * @param searchParams
  */
- async function searchEmails(emailAccount, searchParams) {
+async function searchEmails(emailAccountId, userId, companyId, searchParams ) {
+
+  const confParameters = await parameterStore.getParameters();  
   
-  const connection = await connectionsHelper.getConnection();
-  companyId = 3;
-  let emailIds = await EmailHelper.findEmailIds(
-    connection,
-    searchParams.startingDate,
-    searchParams.sender,
+  const accountInfo = await emailAccountService.getDecryptedCredentials(
+    emailAccountId,
+    userId,
+    confParameters.pg_encrypt_password
   );
 
-  await connectionsHelper.releaseConnection(connection);
-  //Register only the Ids of the found emails
-  let unproccessedEmails = await bulkRegister(emailIds, emailAccount, companyId); //emailIds //
+  const connectionConf = imapHelper.getConfiguration(
+    accountInfo.address,
+    accountInfo.provider,
+    accountInfo.authType,
+    accountInfo.tokenInfo.access_token
+  );
 
-  //Register the rest of the information of each email (subject, data, attachments ) etcc..
-  //In the background
+  const connection = await imapHelper.getConnection(connectionConf);
+  await connection.openBoxAsync("INBOX", true);
+  
+  let emailIds = await imapHelper.findEmailIds(
+    connection,
+    searchParams.startingDate,
+    searchParams.sender
+  );
+
+  await connection.end();
+
+  //Registers only the Ids of the found emails
+  let unproccessedEmails = await bulkRegister(
+    emailIds,
+    accountInfo.address,
+    companyId
+  ); 
+
+  //
   if (unproccessedEmails.length !== 0) {
-    //startEmailWorker(emailAccount);
+    putOnPendingEmailQ(accountInfo.address, userId, accountInfo.id);
   }
 
   return unproccessedEmails;
@@ -74,7 +93,6 @@ function bulkRegister(ids, emailAccount, companyId) {
       batchId: batchId,
       emailAccount: emailAccount,
       companyId: companyId
-
     };
   });
 
@@ -99,3 +117,30 @@ function bulkRegister(ids, emailAccount, companyId) {
   });
 }
 
+
+async function putOnPendingEmailQ(emailAccount, userId, emailAccountId) {
+
+  var payload = {
+    emailAccount,
+    userId,
+    emailAccountId
+  };
+
+  var params = {
+    DelaySeconds: 0,
+    MessageAttributes: {},
+    MessageBody: JSON.stringify(payload),
+    QueueUrl: SQS_PENDING_EMAIL_QUEUE_URL
+  };
+
+  return new Promise((resolve, reject) => {
+    sqs.sendMessage(params, function(err, data) {
+      if (err) {
+        reject(err);
+      } else {
+        console.log("Success", data.MessageId);
+        resolve();
+      }
+    });
+  });
+}

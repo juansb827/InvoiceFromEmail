@@ -10,6 +10,7 @@ const routes = require("./routes");
 
 app.use(bodyParser.json());
 app.use("/api/emailAccounts", routes.emailAccounts);
+app.use("/api/emails", routes.emails);
 //app.use("/api/forms", );
 
 app.use(function(err, req, res, next) {

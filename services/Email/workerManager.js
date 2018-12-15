@@ -18,10 +18,11 @@ module.exports.attempToStartWorker = async (
   secretKey
 ) => {
 
+  
   getRedisConnection();
-
+  logger.info(`Adquiring lock for '${emailAccountId}:${emailAddress}'`);
   if (!(await canStart(emailAccountId))) {
-    logger.info(`Worker already running for: '${emailAccountId}:${emailAddress}'`);
+    logger.info(`Cannot lock, worker already running for: '${emailAccountId}:${emailAddress}'`);
     return;
   }
 
@@ -37,9 +38,7 @@ module.exports.attempToStartWorker = async (
       secretKey
     );
 
-    logger.info(
-      `Started worker for account : '${emailAccountId}:${emailAddress}' `
-    );
+   
 
     const connectionConf = 
       imapHelper.getConfiguration(accountInfo.address, 
@@ -48,6 +47,9 @@ module.exports.attempToStartWorker = async (
     const connection = await imapHelper.getConnection(connectionConf);
 
     await connection.openBoxAsync("INBOX", true);
+    logger.info(
+      `Started worker for account : '${emailAccountId}:${emailAddress}' `
+    );
     await startEmailWorker(accountInfo.address, connection);
     logger.info(
       `Ended worker for account: '${emailAccountId}:${emailAddress}'`
@@ -83,8 +85,7 @@ async function canStart(lockId) {
     "NX",
     "EX",
     LOCK_DURATION
-  );
-  console.log("canStart", canStart);
+  );  
   return canStart;
 }
 

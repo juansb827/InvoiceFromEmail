@@ -1,7 +1,8 @@
 const emailService = require('./mails')
-const emailErrors = require("./Email/ImapHelper/Errors");
+const emailErrors = require('imapHelper').errors;
 const logger = require("../utils/logger");
-
+const parameterStore = require('../lib/parameterStore');
+parameterStore.init(['gapi_client_id','gapi_client_secret', 'pg_encrypt_password']);
 require("dotenv").config();
 const AWS = require("aws-sdk");
 const AWS_DEFAULT_REGION = process.env.AWS_DEFAULT_REGION;
@@ -27,18 +28,13 @@ const next = function(err, req, res, next) {
 
 //TODO: move to a route
 
-emailService.searchEmails( "juansb827@gmail.com",
-     {
+emailService.searchEmails( 88, 1, 2, {
      startingDate: "September 20, 2018",
      sender: "focuscontable@gmail.com"
  })
-//   .then(() => EmailWorker.startEmailWorker("juansb827@gmail.com"))
-  
-//EmailWorker.startEmailWorker("juansb827@gmail.com")
-/*
-  .then(mailIds => {
-    console.log("Finished:##", mailIds);
-  })*/
+ .then(ids => {
+   console.log('SEARCH_EMAILS', ids);
+ })
   .catch(error => {
     if (error.originalError instanceof emailErrors.AuthenticationError) {
       error.statusCode = 400;

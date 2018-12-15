@@ -88,7 +88,9 @@ async function getDecryptedCredentials(id, userId, secretKey) {
     },
     where: { id, userId }
   });
-
+  if (!accountSettings) {
+    throw new Error(`No account settings for id:${id}, userId:${userId}`);
+  }
   if (accountSettings.authMethod === "XOAUTH2") {
     const currentTokenInfo = JSON.parse(accountSettings.tokenInfo);
     

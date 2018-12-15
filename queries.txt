@@ -4,7 +4,7 @@ SELECT * FROM "Attachments"
 SELECT * FROM "Emails"
 SELECT COUNT("id") AS "attch_count" FROM "Attachments" AS "Attachment" WHERE "Attachment"."id" = 24 AND "Attachment"."processingState" = 'DONE'
 
-source /bin/activate
+source bin/activate
  python lib/python2.7/site-packages/pgadmin4/pgAdmin4.py
 //TODO
 //Check errors in mails/processMailsAsync
@@ -21,6 +21,7 @@ SELECT * FROM "Invoices"
 SELECT * FROM "InvoiceItems"
 delete FROM "Invoices";
 delete  from "InvoiceItems";
+SELECT * FROM "EmailAccounts"
 
 SELECT * FROM "Attachments" AS "Attachment" WHERE "Attachment"."processingState" != 'DONE' AND "Attachment"."processingState" IS NOT NULL AND "Attachment"."emailId" = 13;
 
