@@ -2,8 +2,8 @@
   "name": "parameterStore",
   "version": "0.0.1",
   "private": true,
-  "main": "./parameterStore",
-  "dependencies": {
-    "aws-sdk": "^2.361.0"
+  "main": "./parameterStore.js",
+  "dependencies": {      
+      "aws-sdk": "2.361.0"   
   }
 }

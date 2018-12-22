@@ -2,7 +2,8 @@ const router = require("express").Router();
 const emailService = require("./../services/mails");
 
 router.get("/", async (req, res, next) => {
-    parameterStore.getParameters
+
+    throw new Error('NEW ERROR');
    // const { accountId } = req.query;
     //const companyId;
   
