@@ -79,7 +79,8 @@ async function authenticateUser(userInfo) {
 }
 
 async function validateRequest(req, res, next) {
-  const token = (req.body && req.body.access_token) ||
+  try {
+    const token = (req.body && req.body.access_token) ||
   (req.query && req.query.access_token) ||
   req.headers['x-access-token'];
 
@@ -98,7 +99,11 @@ async function validateRequest(req, res, next) {
   });  
 
   req.userData = decoded;
-  next();  
+  next();
+  } catch (err) {
+    next(err);
+  }
+    
 }
 
 async function createToken(id, email, companyId, secret) {

@@ -27,9 +27,9 @@ const next = function(err, req, res, next) {
 };
 
 //TODO: move to a route
-
-emailService.searchEmails( 88, 1, 2, {
-     startingDate: "September 20, 2018",
+const date =  new Date('2018-09-20T00:00:00Z');
+emailService.searchEmails( 90, 15, 2, {  
+     startingDate: date,
      sender: "focuscontable@gmail.com"
  })
  .then(ids => {

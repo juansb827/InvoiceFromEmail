@@ -10,7 +10,7 @@
             "name": "Launch Program",
             "program": "${workspaceFolder}/bin/www", //Invoice/InvoiceProcessor.js//
             "outputCapture": "std"
-            //services/mails.test.js
+            //
         },
         {
             "type": "node",
