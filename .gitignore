@@ -76,3 +76,8 @@ typings/
 
 # Serverless directories
 .serverless
+
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
