@@ -47,6 +47,9 @@ app.use(bodyParser.json());
 //support parsing of application/x-www-form-urlencoded post data
 app.use(bodyParser.urlencoded({ extended: true }));
 
+app.get('/',(_, res) => {
+  res.send({ ok: 'ok'})
+})
 app.use("/api/auth", routes.authentication);
 app.use("/api/emailAccounts", authService.validateRequest, routes.emailAccounts);
 app.use("/api/emails", authService.validateRequest, routes.emails);
