@@ -6,7 +6,7 @@ const googleAuth = require("googleAuth");
 const { AppError } = require("errorManagement");
 
 const { EmailAccount } = require("../db/models");
-const clientCredentials = require("./../credentials.json");
+
 const emailUtils = require('../lib/emailAccountUtils');
 const parameterStore = require("../lib/parameterStore");
 module.exports = {
@@ -155,14 +155,15 @@ async function testConnectionAndCreate(ctx) {
  *  If tokenInfo.xoauth2_token is expired, fetches a new token and saves it into the db.
  */
 async function updateExpiredToken(user, tokenInfo) {
-  const clientInfo = clientCredentials.installed;
+  const confParameters = await parameterStore.getParameters();
+  
   const expired = tokenInfo.expiry_date <= Date.now();
   if (!expired) return tokenInfo;
 
   const xoauth2gen = xoauth2.createXOAuth2Generator({
     user: user,
-    clientId: clientInfo.client_id,
-    clientSecret: clientInfo.client_secret,
+    clientId: confParameters.gapi_client_id,
+    clientSecret: confParameters.gapi_client_secret,
     refreshToken: tokenInfo.refresh_token
   });
 
