@@ -1,10 +1,30 @@
-import React, {Component} from 'react';
+import React from 'react';
+import CssBaseline from '@material-ui/core/CssBaseline';
+
+import { withStyles } from '@material-ui/core/styles';
+
 import Toolbar from '../../components/Navigation/Toolbar/Toolbar';
 import SideDrawer from '../../components/Navigation/SideDrawer/SideDrawer';
 
+const styles = theme => ({
+  root: {
+    display: 'flex',
+  },   
+  toolbar: theme.mixins.toolbar,  
+  content: {
+    flexGrow: 1,
+    padding: theme.spacing.unit * 3,
+  },
+});
 
 
-class Layout extends Component {
+interface Props {    
+    classes: any;
+    theme: any;
+    
+}  
+
+class Layout extends React.Component<Props> {
 
     state = {
         mobileOpen: false
@@ -19,17 +39,25 @@ class Layout extends Component {
         } );
     }
 
-    render(){
+    render() {
+        const { classes } = this.props;
+    
+       
         return (
-            <>
-                <Toolbar drawerToggleClicked={this.drawerToggleClickedHandler} />
-                <SideDrawer mobileOpen={this.state.mobileOpen} />
-                {this.props.children}
-            </>
+          <div className={classes.root}>
+            <CssBaseline />
+            <Toolbar title='Invoice Processor' drawerToggleClicked={this.drawerToggleClickedHandler}/>
+            <SideDrawer mobileOpen={this.state.mobileOpen} 
+            closed={this.drawerToggleClickedHandler}/>
+            <main className={classes.content}>
+              <div className={classes.toolbar} />
+              {this.props.children}
+            </main>
+          </div>
         );
-    }
+      }
 }
 
 
 
-export default Layout;
+export default withStyles(styles, { withTheme: true })(Layout);
