@@ -12,7 +12,8 @@ const styles = theme => ({
   },   
   toolbar: theme.mixins.toolbar,  
   content: {
-    flexGrow: 1,
+    flex: '1',
+    width: '0px',
     padding: theme.spacing.unit * 3,
   },
 });
