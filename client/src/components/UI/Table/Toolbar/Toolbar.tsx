@@ -1,6 +1,7 @@
 import React from 'react';
 import Toolbar from "@material-ui/core/Toolbar";
 import Typography from "@material-ui/core/Typography";
+import CircularProgress from '@material-ui/core/CircularProgress';
 import { withStyles } from "@material-ui/core/styles";
 
 const toolbarStyles = theme => ({
@@ -16,11 +17,18 @@ const toolbarStyles = theme => ({
     title: {
       flex: '0 0 auto',
     },
+    progress: {
+      margin: theme.spacing.unit * 2      
+    },
+    invisible: {
+      opacity: 0
+    }
   });
   
   interface Props {
     title: string;
     classes: any;
+    loading: boolean;
   }
 
   const TableToolbar: React.StatelessComponent<Props> = props => {
@@ -34,6 +42,9 @@ const toolbarStyles = theme => ({
                 {title}
             </Typography>
         </div>
+        <CircularProgress className={
+          [classes.progress, 
+           props.loading ? '': classes.invisible ].join(' ')}  />
       </Toolbar>
     );
   };

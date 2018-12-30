@@ -2,12 +2,12 @@ require("dotenv").config();
 
 const Promise = require("bluebird");
 const crypto = require("crypto");
-const async = require("async");
+
 
 const { sequelize, Sequelize } = require("../db/models");
-const Op = Sequelize.Op;
+
 const { Email, Attachment } = require("../db/models");
-const imapHelper = require("imapHelper");
+
 const emailErrors = require("./../lib/imapHelper/Errors");
 const emailAccountService = require('./emailAccount');
 const logger = require("../utils/logger");
@@ -21,7 +21,8 @@ const sqs = new AWS.SQS({ apiVersion: "2012-11-05" });
 
 module.exports = {
   searchEmails,
-  bulkRegister
+  bulkRegister,
+  getEmailsByCompany
 };
 
 /**
@@ -143,4 +144,31 @@ async function putOnPendingEmailQ(emailAccount, userId, emailAccountId) {
       }
     });
   });
+}
+
+
+function getPaginationValues(options) {
+  const MAX_RESPONSE_ITEMS = 100;
+  const DEFAULT_RESPONSE_ITEMS = 10;
+  const pageSize = Math.min(options.pageSize, MAX_RESPONSE_ITEMS) || DEFAULT_RESPONSE_ITEMS;
+  const pageNumber = Number(options.pageNumber) || 0;  
+  return {
+    offset: pageNumber * pageSize,
+    limit: pageSize
+  }
+  
+}
+
+async function getEmailsByCompany(companyId, options) {
+  
+  const data = await Email.findAndCountAll({
+    where: { companyId },
+    ...getPaginationValues(options),
+    order: [['id', 'DESC']]
+    
+  })  
+  return {
+    data: data.rows,
+    count: data.count
+  };
 }

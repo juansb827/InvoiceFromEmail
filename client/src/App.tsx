@@ -1,6 +1,8 @@
 import React, { Component } from "react";
 import Layout from "./hoc/Layout/Layout";
 import { Route, Switch, Redirect } from "react-router-dom";
+import { withRouter } from "react-router-dom";
+import { connect } from "react-redux";
 
 import Emails from './containers/Emails/Emails';
 import Invoices from './containers/Invoices/Invoices';
@@ -28,4 +30,8 @@ class App extends Component {
 
 }
 
-export default App;
+export default withRouter(
+  connect(
+    
+  )(App)
+);

@@ -1,6 +1,7 @@
 require("dotenv").config();
 
 const crypto = require("crypto");
+const cors = require('cors');
 const express = require("express");
 const bodyParser = require("body-parser");
 const morgan = require("morgan");
@@ -15,6 +16,10 @@ const logger = require("logger");
 
 const app = express();
 const routes = require("./routes");
+
+app.use(cors({  
+    exposedHeaders: ['Pagination-Count','Pagination-Page', 'Pagination-Limit' ]    
+}));
 
 app.use(function requestId(req, res, next) {
   req.transactionId = crypto.randomBytes(16).toString("hex");

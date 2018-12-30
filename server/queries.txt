@@ -22,6 +22,7 @@ SELECT * FROM "InvoiceItems"
 delete FROM "Invoices";
 delete  from "InvoiceItems";
 SELECT * FROM "EmailAccounts"
+SELECT * FROM "Users"
 
 SELECT * FROM "Attachments" AS "Attachment" WHERE "Attachment"."processingState" != 'DONE' AND "Attachment"."processingState" IS NOT NULL AND "Attachment"."emailId" = 13;
 
@@ -34,3 +35,5 @@ UPDATE "EmailAccounts" set "password" = re_encrypted.password, "tokenInfo" = re_
 
 SELECT     PGP_SYM_DECRYPT("password"::bytea, 'TEST_SECRET_KEY3') as name,	
 	 PGP_SYM_DECRYPT("tokenInfo"::bytea, 'TEST_SECRET_KEY3') as age FROM "EmailAccounts"
+
+sequelize db:seed --seed 20181229173929-demo-email.js

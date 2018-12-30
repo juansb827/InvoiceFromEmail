@@ -4,9 +4,20 @@ const router = require("express").Router();
 const emailService = require("./../services/mails");
 
 router.get("/", async (req, res, next) => {
-  throw new Error("NEW ERROR");
-  // const { accountId } = req.query;
-  //const companyId;
+  try {    
+    const companyId = req.userData.companyId;
+    const { page_number, page_size } = req.query;
+    const paginated = await emailService.getEmailsByCompany(companyId, {
+      pageNumber: page_number,
+      pageSize: page_size
+    });
+    res.set({
+      'Pagination-Count': paginated.count
+    })
+    res.send(paginated.data);
+  } catch (err) {
+    next(err);
+  }  
 });
 
 router.get(

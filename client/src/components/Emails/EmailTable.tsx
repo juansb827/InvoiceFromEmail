@@ -1,56 +1,62 @@
-import React from 'react';
-import Table from '../UI/Table/Table';
+import React from "react";
+import Table from "../UI/Table/Table";
+import { createColumn } from "../UI/Table/Table";
+import { connect } from "react-redux";
+import * as actions from '../../store/actions/index';
+import Button from '@material-ui/core/Button';
 
-let id = 0;
-function createData(name, calories, fat, carbs, protein) {
-  id += 1;
-  return { id, name, calories, fat, carbs, protein };
-}
-
-const rows = [
-  createData('Frozen yoghurt', 159, 6.0, 24, 4.0),
-  createData('Ice cream sandwich', 237, 9.0, 37, 4.3),
-  createData('Eclair', 262, 16.0, 24, 6.0),
-  createData('Cupcake', 305, 3.7, 67, 4.3),
-  createData('Gingerbread', 356, 16.0, 49, 3.9)
+const headerColumns = [
+  createColumn("emailAccount", "Cuenta", "left"),
+  createColumn("from", "De"),
+  createColumn("subject", "Asunto"),  
+  createColumn("processingState", "Estado")
 ];
 
-const rows2 = [
-   
-    createData('Cupcake', 305, 3.7, 67, 4.3),
-    createData('Gingerbread', 356, 16.0, 49, 3.9),
-    createData('Frozen yoghurt', 159, 6.0, 24, 4.0),
-    createData('Ice cream sandwich', 237, 9.0, 37, 4.3),
-    createData('Eclair', 262, 16.0, 24, 6.0),
-]
 
+const emails = class extends React.Component<any> {
 
-
-const emails = class extends React.Component {
-
-    state = {
-        rows: []   
-    }
-    onPageChangeHandler = (event, page) => {
-        console.log(page);
-        setTimeout(()=>{
-            this.setState({
-                rows: page == 1 ? rows: rows2
-            })
-        }, 2000)
-        
-    }
-    render(){ 
-        return (
-            <div>Emails Component
-                <Table 
-                    title='Emails'
-                    rows={this.state.rows}                
-                    onPageChange={this.onPageChangeHandler} />
-            </div>
-        )
-    } 
+  componentDidMount() {
+    this.props.onPageChange(this.props.currentPage);
+  }  
   
-}
+  onPageChangeHandler = (_, pageNumber) => {    
+    this.props.onPageChange(pageNumber);
+  };
 
-export default emails;
+  render() {
+    return (
+      <div>
+        <Button variant="contained" >
+          Default
+        </Button>
+        <Table
+          rowsPerPage={10}
+          count={this.props.emailCount}
+          headerColumns={headerColumns}
+          title="Emails"
+          rows={this.props.rows}
+          currentPage={this.props.currentPage}
+          onPageChange={this.onPageChangeHandler}
+          loading={this.props.loading}
+        />
+      </div>
+    );
+  }
+};
+
+const mapStateToProps = state => {
+  return { 
+    currentPage: state.email.currentPage,
+    rows: state.email.emails,
+    emailCount: state.email.count,
+    loading: state.email.loading
+  };
+};
+
+const mapDispatchToProps = dispatch => {
+  return {
+    onPageChange: (pageNumber) =>  dispatch(actions.changePage(pageNumber))    
+  };
+};
+
+export default connect(mapStateToProps, mapDispatchToProps)(emails);
