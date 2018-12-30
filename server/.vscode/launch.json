@@ -8,7 +8,15 @@
             "type": "node",
             "request": "launch",
             "name": "Launch Program",
-            "program": "${workspaceFolder}/bin/www.js"
+            "program": "${workspaceFolder}/bin/www", //Invoice/InvoiceProcessor.js//
+            "outputCapture": "std"
+            //
+        },
+        {
+            "type": "node",
+            "request": "attach",
+            "name": "Attach ",
+            "port": 9229
         }
     ]
 }
