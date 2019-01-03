@@ -7,7 +7,7 @@ const crypto = require("crypto");
 const { sequelize, Sequelize } = require("../db/models");
 
 const { Email, Attachment } = require("../db/models");
-
+const utils = require('./utils');
 const emailErrors = require("./../lib/imapHelper/Errors");
 const emailAccountService = require('./emailAccount');
 const logger = require("../utils/logger");
@@ -147,23 +147,12 @@ async function putOnPendingEmailQ(emailAccount, userId, emailAccountId) {
 }
 
 
-function getPaginationValues(options) {
-  const MAX_RESPONSE_ITEMS = 100;
-  const DEFAULT_RESPONSE_ITEMS = 10;
-  const pageSize = Math.min(options.pageSize, MAX_RESPONSE_ITEMS) || DEFAULT_RESPONSE_ITEMS;
-  const pageNumber = Number(options.pageNumber) || 0;  
-  return {
-    offset: pageNumber * pageSize,
-    limit: pageSize
-  }
-  
-}
 
 async function getEmailsByCompany(companyId, options) {
   
   const data = await Email.findAndCountAll({
     where: { companyId },
-    ...getPaginationValues(options),
+    ...utils.getPaginationValues(options),
     order: [['id', 'DESC']]
     
   })  

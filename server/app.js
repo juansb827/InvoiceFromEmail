@@ -58,6 +58,7 @@ app.get('/',(_, res) => {
 app.use("/api/auth", routes.authentication);
 app.use("/api/emailAccounts", authService.validateRequest, routes.emailAccounts);
 app.use("/api/emails", authService.validateRequest, routes.emails);
+app.use("/api/invoices", authService.validateRequest, routes.invoices);
 
 
 //catch 404 and forward to error handler  middleware
