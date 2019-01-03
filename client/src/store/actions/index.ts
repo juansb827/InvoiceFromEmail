@@ -1,4 +1,10 @@
 export {
     fetchEmails,
-    changePage
+    changePage,    
 } from './email'
+
+export {
+    changeItemsPage,
+    selectItem
+       
+} from './item'   

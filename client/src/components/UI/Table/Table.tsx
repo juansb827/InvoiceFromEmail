@@ -45,6 +45,9 @@ interface Props {
     rowsPerPage: number;
     headerColumns: Array<Column>;
     loading: boolean;
+    hover?: boolean;
+    onRowClick?: Function;
+    
 }
 
  const SimpleTable: React.StatelessComponent<Props> = props => {
@@ -68,7 +71,8 @@ interface Props {
             <TableBody>
               {rows.map(row => {
                 return (                  
-                  <TableRow key={row.id}>
+                  <TableRow key={row.id} hover={props.hover} 
+                    onClick={ event => props.onRowClick ? props.onRowClick(event, row) : null }>
                     {headerColumns.map(col => 
                       <TableCell key={col.id} align={col.align}>{row[col.id]}
                       </TableCell>

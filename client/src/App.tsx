@@ -20,7 +20,7 @@ class App extends Component {
         <Layout>
           <Switch>
             <Route path="/emails" component={Emails} />
-            <Route path="/invoices" component={Invoices} />
+            <Route path="/invoices" component={Invoices} />            
             <Redirect to="/emails" />
           </Switch>
         </Layout>

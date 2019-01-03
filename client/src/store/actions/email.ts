@@ -1,6 +1,5 @@
 import * as actionTypes from './actionTypes';
-import axios from '../../axios-instance';
-
+import * as api from '../../api/api';
 
 export const fetchEmailSuccess = (emails, count: number) => {
     return {
@@ -26,17 +25,10 @@ export const fetchEmailsStart  = () => {
 export const fetchEmails = (pageNumber: number, pageSize: number) => {    
     return dispatch => {        
         dispatch(fetchEmailsStart());
-        axios.get('/emails', {
-            params: {
-                page_number: pageNumber,
-                page_size: pageSize
-            }
-        }).then(res => {
-            console.log('DATA', res);
-            const count = +res.headers['pagination-count'];
-            dispatch(fetchEmailSuccess(res.data, count))
-        })
-        .catch(err => {
+        api.getEmails({ pageNumber, rowsPerPage: pageSize })
+        .then(res => dispatch(fetchEmailSuccess(res.data, res.count)))
+        
+                .catch(err => {
             dispatch(fetchEmailsFail(err));
         }) 
     }

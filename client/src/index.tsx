@@ -9,10 +9,15 @@ import App from './App';
 import * as serviceWorker from './serviceWorker';
 
 import emailReducer from './store/reducers/email';
+import itemReducer from './store/reducers/item';
+import itemTypes from './store/itemTypes';
 
 const composeEnhancers = (process.env.NODE_ENV === 'development' ? (window as any).__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ : null) || compose;
 const rootReducer = combineReducers({
-    email: emailReducer 
+//    email: emailReducer,
+    [itemTypes.EMAIL] : itemReducer(itemTypes.EMAIL),
+    [itemTypes.INVOICE] : itemReducer(itemTypes.INVOICE),
+    [itemTypes.INVOICE_ITEMS] : itemReducer(itemTypes.INVOICE_ITEMS)  
 });
 
 const store = createStore(rootReducer, composeEnhancers(
