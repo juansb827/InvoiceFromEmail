@@ -1,45 +1,49 @@
 const router = require("express").Router();
 const emailAccount = require("./../services/emailAccount");
+const { query } = require("express-validator/check");
+const { schemaValidator } = require("expressMiddlewares");
 
-router.get("/authUrl", async (req, res, next) => {
-  try {
-    const { emailAddress, provider } = req.query;
+router.get(
+  "/authUrl",
+  schemaValidator(
+  [query("emailAddress").trim().isEmail(), 
+   query("provider").trim().exists({ checkNull: true, checkFalsy: true })]),
+  async (req, res, next) => {
+    try {
+      const { emailAddress, provider } = req.query;
 
-    if (!emailAddress || !provider) {
-      throw new AppError(
-        'params "emailAddress" and "provider" are missing or invalid',
-        400,
-        "InvalidInput"
+      const authUrl = await emailAccount.generateAuthUrl(
+        emailAddress,
+        provider
       );
+      res.status(200).send({
+        redirectUrl: authUrl
+      });
+    } catch (err) {
+      next(err);
     }
-    const authUrl = await emailAccount.generateAuthUrl(emailAddress, provider);
-    res.status(200).send({
-      redirectUrl: authUrl
-    });
-  } catch (err) {
-    next(err);
   }
-});
+);
 
 router.post("/", async (req, res, next) => {
   try {
     const contextObject = {
-      accountData: req.body,      
-    };    
+      accountData: req.body
+    };
     contextObject.accountData.userId = req.userData.id;
 
     const newAccount = await emailAccount.testConnectionAndCreate(
       contextObject
     );
-    
+
     res.status(200).send(newAccount);
   } catch (err) {
-    next(err);
+    next(err);    
   }
 });
 
 router.get("/", async (req, res, next) => {
-  try {    
+  try {
     const userId = req.userData.id;
     const { page_number, page_size } = req.query;
 
@@ -47,16 +51,15 @@ router.get("/", async (req, res, next) => {
       pageNumber: page_number,
       pageSize: page_size
     });
-    
+
     res.set({
-      'Pagination-Count': paginated.count
-    })
+      "Pagination-Count": paginated.count
+    });
 
     res.send(paginated.data);
-
   } catch (err) {
     next(err);
-  }  
+  }
 });
 
 module.exports = router;

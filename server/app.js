@@ -7,11 +7,12 @@ const bodyParser = require("body-parser");
 const morgan = require("morgan");
 const authService = require('./services/authentication');
 
+
 require("./lib/parameterStore").init(
   ["gapi_client_id", "gapi_client_secret", "pg_encrypt_password", 'app_secret'],
   60 * 5
 );
-const { errorHandler, AppError } = require("errorManagement");
+const { errorHandler, AppError, sequelizeErrorFormatter } = require("errorManagement");
 const logger = require("logger");
 
 const app = express();
@@ -73,4 +74,5 @@ app.use((_, __, next) => {
 });
 
 errorHandler.registerAndHandleAllErrors(app);
+errorHandler.addFormatter(sequelizeErrorFormatter);
 module.exports = app;

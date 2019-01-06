@@ -77,7 +77,7 @@ export const getAuthUrl = (emailAddress: string, emailProvider: string) => {
         provider: emailProvider
       }
     })
-    .then(res => res.data.redirectUrl);
+    .then(res => res.data.redirectUrl)    
 };
 
 export const createEmailAccount = (

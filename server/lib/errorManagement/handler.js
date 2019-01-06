@@ -8,6 +8,8 @@ module.exports = new errorHandler();
 
 function errorHandler() {
 
+  this.errorFormatters = [];
+
   this.registerAndHandleAllErrors = function(app) {
     logger.debug(`Error handler now registers to handle all errors`);
 
@@ -17,7 +19,7 @@ function errorHandler() {
       if (!req.transactionId) {
         throw new Error('transactionId is missing in request objects');
       }
-
+      
       this.logAndNotifyAboutError(err, req.transactionId);
       res.status(err.httpCode || 500).json(this.getFormatedError(err));
       //since this error comes from an http request, we keep the process alive by taking a risky call that the error is probably operational
@@ -54,15 +56,28 @@ function errorHandler() {
     }
   };
 
-  this.logAndNotifyAboutError = function(error, trnId) {
+  this.logAndNotifyAboutError = function (error, trnId) {
     if (!error.isOperational) {
       const msg = ` A non-trusted (not operational) error was detect, this will likely to kill the process - please analyze this issue and act thoughtfully`;
       logger.info(trnId ? `TransactionId:'${trnId}' ${msg}`: msg);      
     }
 
-    const msg = `Error handler is reporting a new error: 
-      ${error.isOperational ? error : error.stack }`;
-    logger.error(trnId ? `TransactionId:'${trnId}' ${msg}`: msg);
+    let msg = 'Error handler is reporting a new error: ' 
+      
+    let customMsg = null;  
+    
+    this.errorFormatters.every(errorFormatter => {
+      customMsg = errorFormatter.getMessage(error);  
+      return !customMsg;
+    });
+    if (customMsg) {
+      msg += customMsg
+    }else{
+      msg += `${error.isOperational ? error : error.stack }`;
+    }
+    
+    logger.error(trnId ? `TransactionId:'${trnId}' ${msg}`: msg);  
+    
       
 
 
@@ -77,4 +92,8 @@ function errorHandler() {
     }; 
   };
 
+}
+
+errorHandler.prototype.addFormatter= function(errorFormatter) {
+  this.errorFormatters.push(errorFormatter);
 }

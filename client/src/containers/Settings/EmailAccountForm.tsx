@@ -22,6 +22,9 @@ import CircularProgress from "@material-ui/core/CircularProgress";
 import * as yup from "yup";
 import * as api from "../../api/api";
 
+import withErrorHandler from '../../hoc/withErrorHandler';
+import axios from '../../axios-instance';
+
 const styles: any = theme => ({
   root: {
     display: "flex",
@@ -43,15 +46,15 @@ const styles: any = theme => ({
 });
 
 function getSteps() {
-  return ["Información de la Cuenta", "Permitir Accesso", "Create an ad"];
+  return ["Información de la Cuenta", "Permitir Accesso", "Cuenta Asociada"];
 }
 
 class EmailAccountForm extends React.Component<any> {
   state = {
-    activeStep: 0,
+    activeStep: 2,
     loading: false,
     authUrl: ""
-  };
+  };  
 
   handleNext = () => {
     switch (this.state.activeStep) {
@@ -65,7 +68,9 @@ class EmailAccountForm extends React.Component<any> {
               loading: false,
               activeStep: 1
             });
-          });
+          }).catch(err => {
+            this.setState({ loading: false })            
+          })
         }
         break;
 
@@ -80,11 +85,14 @@ class EmailAccountForm extends React.Component<any> {
                 loading: false,
                 activeStep: 2
               });
-            });
+            })
+            .catch(err => {
+              this.setState({ loading: false })            
+            })
         }
         break;
       case 2:
-        this.handleFinish();
+        this.handleFinish(true);
         break;
       default:
         this.setState((state: any) => ({
@@ -93,8 +101,8 @@ class EmailAccountForm extends React.Component<any> {
     }
   };
 
-  handleFinish = () => {
-    console.log("Finished Process");
+  handleFinish = (succesful) => {
+    this.props.onFinish(succesful);    
   };
 
   handleBack = () => {
@@ -103,12 +111,24 @@ class EmailAccountForm extends React.Component<any> {
     }));
   };
 
-  handleCompletedSeccion1;
+  reset() {
+    this.setState({
+      activeStep: 0,
+      loading: false,
+      authUrl: ""
+    })
+    this.props.resetForm(initialValues);
+    
+  }
 
   render() {
+    
     const { classes } = this.props;
     const steps = getSteps();
-    const { activeStep, authUrl } = this.state;
+    const { activeStep, authUrl, loading } = this.state;
+    const disableBackButton = activeStep === 0 || activeStep === 0 || loading;
+    const disableNextButton = loading;
+
     const {
       values,
       touched,
@@ -123,7 +143,7 @@ class EmailAccountForm extends React.Component<any> {
     const change = (name, e) => {
       e.persist();
       handleChange(e);
-      console.log(errors);
+      //console.log(errors);
       setFieldTouched(name, true, false);
     };
 
@@ -209,7 +229,7 @@ class EmailAccountForm extends React.Component<any> {
                   <div className={classes.actionsContainer}>
                     <div>
                       <Button
-                        disabled={activeStep === 0 || this.state.loading}
+                        disabled={disableBackButton}
                         onClick={this.handleBack}
                         className={classes.button}
                       >
@@ -220,7 +240,7 @@ class EmailAccountForm extends React.Component<any> {
                         color="primary"
                         onClick={this.handleNext}
                         className={classes.button}
-                        disabled={this.state.loading}
+                        disabled={disableNextButton}
                       >
                         {activeStep === steps.length - 1 ? "Finish" : "Next"}
                       </Button>
@@ -244,27 +264,34 @@ interface MyFormValues {
 
 const validationSchema = yup.object({
   emailAddress: yup
-    .string("Enter your email")
-    .email("Enter a valid email")
-    .required("Email is required"),
-  emailProvider: yup
-    .string("Enter your email-provider")
+    .string()
     .trim()
-    .required("Email provider is required")
+    .email("Ingrese una direccón valida")
+    .required("Ingrese la dirección de email"),
+  emailProvider: yup
+    .string()
+    .trim()
+    .required("Email provider is required"),
+    accessCode: yup
+    .string()
+    .trim()
+    .required("Ingrese el código de verificación"),
+    
 });
 
 //export default withStyles(styles, { withTheme: true })(EmailAccountForm);
-const MyForm = withStyles(styles, { withTheme: true })(EmailAccountForm);
-export default function FormContainer() {
+const MyForm = withStyles(styles, { withTheme: true })(
+  withErrorHandler(EmailAccountForm, axios)
+  );
+  var initialValues = { emailAddress: "", emailProvider: "", accessCode: "" } as any
+export default function FormContainer(props) {
   return (
     <Formik
-      initialValues={
-        { emailAddress: "", emailProvider: "", accessCode: "" } as any
-      }
+      initialValues={initialValues}
       validationSchema={validationSchema}
       onSubmit={(values: MyFormValues) => alert(JSON.stringify(values))}
       render={(formikBag: FormikProps<MyFormValues>) => (
-        <MyForm {...formikBag} />
+        <MyForm {...props} {...formikBag} />
       )}
     />
   );
