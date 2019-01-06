@@ -4,16 +4,18 @@ const { sequelize, Sequelize } = require("../db/models");
 const Op = Sequelize.Op;
 const googleAuth = require("googleAuth");
 const { AppError } = require("errorManagement");
-
+const _ = require('lodash');
 const { EmailAccount } = require("../db/models");
 
 const emailUtils = require('../lib/emailAccountUtils');
 const parameterStore = require("../lib/parameterStore");
+const utils = require('./utils');
 module.exports = {
   createEmailAccount,
   getDecryptedCredentials,
   testConnectionAndCreate,
-  generateAuthUrl
+  generateAuthUrl,
+  getByUserId
 };
 
 async function createEmailAccount(
@@ -206,3 +208,25 @@ async function generateAuthUrl(emailAddress, provider) {
       throw new AppError("Unsupported email provider", 400, "InvalidInput");
   }
 }
+
+async function getByUserId (userId, options) {
+
+  const data = await EmailAccount.findAndCountAll({  
+    attributes: {
+      exclude: ['password', 'tokenInfo']
+    },
+    where: { userId },
+    ...utils.getPaginationValues(options),
+    order: [['id', 'DESC']]    
+  });
+  
+
+  
+  return {
+    data: data.rows,
+    count: data.count
+  };
+
+}
+
+

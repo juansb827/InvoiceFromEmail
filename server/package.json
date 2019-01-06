@@ -28,6 +28,7 @@
     "imapHelper": "file:lib/imapHelper",
     "invoiceUtils": "file:lib/invoiceUtils",
     "jsonwebtoken": "8.4.0",
+    "lodash": "^4.17.11",
     "logger": "file:lib/logger",
     "morgan": "^1.9.1",
     "parameterStore": "file:lib/parameterStore",

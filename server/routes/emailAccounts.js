@@ -1,6 +1,5 @@
 const router = require("express").Router();
 const emailAccount = require("./../services/emailAccount");
-const parameterStore = require("../lib/parameterStore");
 
 router.get("/authUrl", async (req, res, next) => {
   try {
@@ -15,7 +14,7 @@ router.get("/authUrl", async (req, res, next) => {
     }
     const authUrl = await emailAccount.generateAuthUrl(emailAddress, provider);
     res.status(200).send({
-      redirectURL: authUrl
+      redirectUrl: authUrl
     });
   } catch (err) {
     next(err);
@@ -37,6 +36,27 @@ router.post("/", async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+router.get("/", async (req, res, next) => {
+  try {    
+    const userId = req.userData.id;
+    const { page_number, page_size } = req.query;
+
+    const paginated = await emailAccount.getByUserId(userId, {
+      pageNumber: page_number,
+      pageSize: page_size
+    });
+    
+    res.set({
+      'Pagination-Count': paginated.count
+    })
+
+    res.send(paginated.data);
+
+  } catch (err) {
+    next(err);
+  }  
 });
 
 module.exports = router;

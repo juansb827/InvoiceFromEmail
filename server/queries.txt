@@ -37,3 +37,4 @@ SELECT     PGP_SYM_DECRYPT("password"::bytea, 'TEST_SECRET_KEY3') as name,
 	 PGP_SYM_DECRYPT("tokenInfo"::bytea, 'TEST_SECRET_KEY3') as age FROM "EmailAccounts"
 
 sequelize db:seed --seed 20181229173929-demo-email.js
+CHOKIDAR_USEPOLLING=true

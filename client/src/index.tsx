@@ -17,7 +17,8 @@ const rootReducer = combineReducers({
 //    email: emailReducer,
     [itemTypes.EMAIL] : itemReducer(itemTypes.EMAIL),
     [itemTypes.INVOICE] : itemReducer(itemTypes.INVOICE),
-    [itemTypes.INVOICE_ITEMS] : itemReducer(itemTypes.INVOICE_ITEMS)  
+    [itemTypes.INVOICE_ITEMS] : itemReducer(itemTypes.INVOICE_ITEMS),
+    [itemTypes.EMAIL_ACCOUNT] : itemReducer(itemTypes.EMAIL_ACCOUNT)    
 });
 
 const store = createStore(rootReducer, composeEnhancers(

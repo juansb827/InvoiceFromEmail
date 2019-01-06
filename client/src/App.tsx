@@ -6,6 +6,7 @@ import { connect } from "react-redux";
 
 import Emails from './containers/Emails/Emails';
 import Invoices from './containers/Invoices/Invoices';
+import Settings from './containers/Settings/Settings';
 
 import "./App.css";
 
@@ -21,6 +22,7 @@ class App extends Component {
           <Switch>
             <Route path="/emails" component={Emails} />
             <Route path="/invoices" component={Invoices} />            
+            <Route path="/settings" component={Settings} />            
             <Redirect to="/emails" />
           </Switch>
         </Layout>
