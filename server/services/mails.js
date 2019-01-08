@@ -7,6 +7,7 @@ const crypto = require("crypto");
 const { sequelize, Sequelize } = require("../db/models");
 
 const { Email, Attachment } = require("../db/models");
+const imapHelper = require('imapHelper');
 const utils = require('./utils');
 const emailErrors = require("./../lib/imapHelper/Errors");
 const emailAccountService = require('./emailAccount');

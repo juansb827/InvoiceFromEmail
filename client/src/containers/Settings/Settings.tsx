@@ -9,6 +9,7 @@ import Button from '@material-ui/core/Button';
 import EmailAccountForm from './EmailAccountForm';
 
 
+
 import * as api from '../../api/api';
 
 const rowsPerPage = 10;
@@ -22,7 +23,7 @@ const headerColumns = [
 const emails = class extends React.Component<any> {
   state = {
     itemsOpen: true,
-    accountDialogOpen: false
+    accountDialogOpen: true
   };
 
   componentDidMount() {
@@ -62,6 +63,7 @@ const emails = class extends React.Component<any> {
   }
 
   render() {
+    const LeForm = EmailAccountForm as any;
     return (      
         <>        
         <Table
@@ -83,7 +85,7 @@ const emails = class extends React.Component<any> {
         <Dialog           
           open={this.state.accountDialogOpen} 
           onClose={this.handleOpenAccountDialog.bind(this, false)} >
-          <EmailAccountForm onFinish={this.handleEmailFormFinished}/>
+          <LeForm onFinish={this.handleEmailFormFinished}/>
         </Dialog>   
 
        </>

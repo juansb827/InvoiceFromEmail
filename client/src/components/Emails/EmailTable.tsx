@@ -29,10 +29,7 @@ const emails = class extends React.Component<any> {
 
   render() {
     return (
-      <div>
-        <Button variant="contained" >
-          Default
-        </Button>
+      <div>        
         <Table
           rowsPerPage={rowsPerPage}
           count={this.props.emailCount}
@@ -43,6 +40,7 @@ const emails = class extends React.Component<any> {
           onPageChange={this.onPageChangeHandler}
           loading={this.props.loading}
         />
+           
       </div>
     );
   }
