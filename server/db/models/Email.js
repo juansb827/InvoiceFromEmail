@@ -17,7 +17,7 @@ module.exports = (sequelize, DataTypes) => {
          * INFO  - info (from, subject, date etc.., attachments)of the email has been registered
          * DONE - info registered and attachments processed
          */
-        type: DataTypes.ENUM("UNPROCESSED", "INFO", "DONE"),
+        type: DataTypes.ENUM("UNPROCESSED", "INFO", "DONE", "ERROR"),
         defaultValue: "UNPROCESSED"
       },
       attachments: DataTypes.INTEGER,

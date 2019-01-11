@@ -125,8 +125,7 @@ class SelectProvider extends React.Component<Props> {
               <Button
                 variant="contained"
                 type="submit"
-                color="primary"
-                onClick={() => {}}
+                color="primary"                
                 disabled={loading}
                 className={classes.button}
               >

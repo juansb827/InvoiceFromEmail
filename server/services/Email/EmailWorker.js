@@ -1,8 +1,8 @@
 const fs = require("fs");
 const logger = require("../../utils/logger");
 const async = require("async");
-const crypto = require('crypto');
-const stream = require('stream');
+const crypto = require("crypto");
+const stream = require("stream");
 const { Email, Attachment } = require("../../db/models");
 const { sequelize, Sequelize } = require("../../db/models");
 const imapHelper = require("./../../lib/imapHelper/");
@@ -19,7 +19,8 @@ const S3_INVOICE_BUCKET_NAME = "invoice-processor";
 module.exports = {
   startEmailWorker
 };
-
+const XML_INVOICE_REGEX = /^FACE_[a-fA-F0-9]+\.XML$/;
+const XML_MAX_SIZE_BYTES = Math.pow(10, 1) //1 megabyte;
 /**
 * @description - starts a worker for the email account    
   All State is managed through DB to achieve a Fault-Tolerant Process:
@@ -49,16 +50,20 @@ module.exports = {
   
 */
 async function startEmailWorker(emailAccount, connection) {
-  const pendingEmails = await getPendingEmails(emailAccount);
+  const result = await getPendingEmails(emailAccount);
+  const pendingEmails = result.data;
+
   if (pendingEmails.length === 0) {
     return;
   }
+  const restartAfterFinish = pendingEmails.length < result.count;
+
   const unprocessedEmails = pendingEmails.filter(email => {
     return email.processingState === "UNPROCESSED"; //Emails without attachment metadata
   });
 
   if (unprocessedEmails.length !== 0) {
-    //Finds the Attachment Metadata and Updates the model instance
+    //Finds the Email and Attachment Metadata and Updates the model instance accordingly
     await getEmailsData(unprocessedEmails, connection);
     //Saves the instance in DB
     for (email of unprocessedEmails) {
@@ -75,41 +80,53 @@ async function startEmailWorker(emailAccount, connection) {
 
       try {
         const extention = attach.name.slice(-3).toUpperCase();
-        
         let processingState = "SKIPPED";
 
-        if ("PDF,XML".includes(extention)) {
-          const attachmentStream = await imapHelper.getAttachmentStream(
-            email.uid,
-            attach.partId,
-            attach.encoding,
-            connection
-          );
-          let fileURI = await uploadToS3(attachmentStream, email.companyId, attach.name);         
-        
-          processingState = "DOWNLOADED";
-          if (extention === "PDF") {
-            processingState = "DONE";
+        if (XML_INVOICE_REGEX.test(attach.name.toUpperCase())) {
+          //PDF,XML "XML".includes(extention)
+          if (attach.size > XML_MAX_SIZE_BYTES) {
+            processingState = "ERROR";
+            attach.errorCause = `El archivo tiene un tamaño de mas de ${XML_MAX_SIZE_BYTES} Bytes`;
+          } else {
+            const attachmentStream = await imapHelper.getAttachmentStream(
+              email.uid,
+              attach.partId,
+              attach.encoding,
+              connection
+            );
+
+            let fileURI = await uploadToS3(
+              attachmentStream,
+              email.companyId,
+              attach.name
+            );
+
+            processingState = "DOWNLOADED";
+            if (extention === "PDF") {
+              processingState = "DONE";
+            }
+            attach.fileLocation = fileURI;
           }
-          attach.fileLocation = fileURI;
         }
 
         attach.processingState = processingState;
-        
-
         await attach.save();
-
-        
       } catch (err) {
         logger.error(err);
       }
     }
+    if (email.Attachments) {
+      updateStateIfNecessary(email);
+    }
   }
-
+  //Sends files that seem to be an invoice to the InvoiceQ
   for (email of pendingEmails) {
     for (attach of email.Attachments) {
       const extention = attach.name.slice(-3).toUpperCase();
-      if (attach.processingState === "DOWNLOADED" && extention === "XML") {
+      if (
+        attach.processingState === "DOWNLOADED" &&
+        XML_INVOICE_REGEX.test(attach.name.toUpperCase())
+      ) {
         await putOnInvoiceProcessinQ(
           //TODO async.parallel
           attach.fileLocation,
@@ -121,11 +138,42 @@ async function startEmailWorker(emailAccount, connection) {
   }
 }
 
+async function updateStateIfNecessary(email) {
+  let hasError = false;
+  const total = email.Attachments.reduce((total, attach) => {
+    const { processingState } = attach;
+    if (processingState === "ERROR") {
+      hasError = true;
+      return total + 1;
+    }
+
+    if (processingState === "DONE" || processingState === "SKIPPED") {
+      return total + 1;
+    }
+
+    return total;
+  }, 0);
+
+  let updatedState = null;
+  if (total === email.Attachments.length) {
+    updatedState = "DONE";
+    if (hasError) {
+      updatedState = "ERROR";
+    }
+  }
+  
+  if (updatedState) {
+    email.processingState = updatedState;
+    email.save();
+  }
+}
+
 /**
  * @description - gets the emails that are not completely processed
  */
 async function getPendingEmails(emailAccount) {
-  return Email.findAll({
+  const maxEmails = 100;
+  const data = await Email.findAndCountAll({
     include: [Attachment],
     where: {
       emailAccount: emailAccount,
@@ -133,8 +181,16 @@ async function getPendingEmails(emailAccount) {
         { processingState: { [Op.ne]: "DONE" } },
         { processingState: { [Op.ne]: null } }
       ]
-    }
+    },
+    order: [["id", "ASC"]],
+    offset: 0,
+    limit: maxEmails
   });
+
+  return {
+    data: data.rows,
+    count: data.count
+  };
 }
 
 /**
@@ -184,15 +240,15 @@ async function getEmailsData(unproccessedEmails, connection) {
         reject(err);
       })
       .on("end", () => {
-        console.log("End", remaining);
+        console.log("GetEmailData End", remaining);
       });
-    console.log("Start", remaining);
+    console.log("GetEmailData Start", remaining);
   });
 }
 
 var saveEmailsData = async message => {
   return sequelize.transaction(t => {
-    message.processingState = "INFO";
+    message.processingState = email.attachments === 0 ? "DONE" : "INFO";
     let chain = message.save({
       transaction: t
     });
@@ -221,9 +277,6 @@ async function saveStream(stream, fileName) {
 }
 
 async function uploadToS3(fileStream, companyId, fileName) {
- 
-
-
   if (!companyId) {
     throw new Error("CompanyId can not be null");
   }
@@ -233,19 +286,18 @@ async function uploadToS3(fileStream, companyId, fileName) {
   const uuid = crypto.randomBytes(16).toString("hex");
   const fileKey = `${companyId}/${uuid}-${fileName}`;
 
-  const promise = s3.upload({ 
-    Bucket: S3_INVOICE_BUCKET_NAME, 
-     Key: fileKey,    
-     Body: pass
-  }).promise();
+  const promise = s3
+    .upload({
+      Bucket: S3_INVOICE_BUCKET_NAME,
+      Key: fileKey,
+      Body: pass
+    })
+    .promise();
 
   fileStream.pipe(pass);
   await promise;
-  
-  return `${S3_INVOICE_BUCKET_NAME}/${fileKey}`
-  
 
-
+  return `${S3_INVOICE_BUCKET_NAME}/${fileKey}`;
 }
 
 async function putOnInvoiceProcessinQ(fileLocation, companyId, attach) {

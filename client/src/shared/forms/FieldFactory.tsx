@@ -108,6 +108,11 @@ export const WrappedTextField: React.StatelessComponent<FieldOptions> = props =>
 };
 
 export const WrappedDatePicker: any = (props) => {
+  const { name } = props;
+  const { touched, errors, values } = props.formikBag;
+
+  values[name] = values[name] || ' ';
+  //When the value of the datepicker becomes the component ui gets bugged
   const newProps = {
     ...props,
     type: 'date'    

@@ -34,10 +34,9 @@ let msgToProccessCount = 0;
  * 
  * @param {*} imap - an Imap instance
  */
-async function findEmailIds(imap, startingDate, sender) {    
-    //'September 20, 2018'
-    //'focuscontable'
-    return imap.searchAsync(['ALL', ['SINCE', startingDate], ['FROM', sender]]);
+async function findEmailIds(imap, searchParams) {        
+    
+    return imap.searchAsync(searchParams);
 
 }
 
@@ -73,33 +72,74 @@ function connectToEmailServer(imapConfiguration) {
         imap.connect();
     });
 }
-
+ 
  function fetchEmails(imap, emailIds) {
 
 
     const emitter = new EventEmitter();
-
-    imap.fetch(emailIds, {
-        bodies: ['HEADER.FIELDS (FROM TO SUBJECT DATE)'], //HEADER.FIELDS (FROM TO SUBJECT DATE)','TEXT
-        struct: true
-    })
-        .on('message', async (msg, sequenceNumber) => {
+    console.log("Fetching Emails", emailIds.length);
+    process.nextTick(async ()=>{
+        const FETCH_CONCURRENCY=10;
+        let idx = 0;
+        while (idx < emailIds.length) {
+            const end = Math.min(idx + FETCH_CONCURRENCY, emailIds.length);    
+            const ids = emailIds.slice(idx, end);        
             try {
-                const parsedMessage = await parseMessage(msg, sequenceNumber);
-                emitter.emit('message', parsedMessage);
+                await fetchLimited(imap, ids, emitter);
+                console.log("Outher - Finish", ids.length);
+                idx += ids.length;
             } catch (err) {
                 emitter.emit('error', err);
-
+                break;
             }
-        })
-        .once('error', err => {
-            console.log('Emited error');
-            emitter.emit('error', err);
-        })
-        .once('end', () => emitter.emit('end'));
+        }
+        emitter.emit('end')
+        if (idx === emailIds.length) {
+            console.log("Finished Fetching", emailIds.length);
+        } else {
+            console.log("Finished Fetching with emails left");
+        }
+        
+
+    })
+    
+
+    
+
+    
 
     return emitter;
 
+}
+
+async function fetchLimited (imap, ids, emitter) {
+    await new Promise((resolve, reject) => {
+        let completed = 0;
+        imap.fetch(ids, {
+            bodies: ['HEADER.FIELDS (FROM TO SUBJECT DATE)'], //HEADER.FIELDS (FROM TO SUBJECT DATE)','TEXT
+            struct: true
+        })
+            .on('message', async (msg, sequenceNumber) => {
+                try {
+                    const parsedMessage = await parseMessage(msg, sequenceNumber);
+                    emitter.emit('message', parsedMessage);
+                    completed++;
+                    console.log("fetchLimited", 'Fechted a mail');
+                    if (completed === ids.length) {
+                        console.log("fetchLimited", 'Done fetching:' + ids.length + ' emails');
+                        resolve();
+                    }
+
+                } catch (err) {                        
+                    reject(err);
+                }
+            })
+            .once('error', err => {                
+                reject(err);
+            })
+            //.once('end', () => emitter.emit('end'));
+    });
+    
 }
 
 async function parseMessage(msg, seqno) {

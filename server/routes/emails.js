@@ -23,8 +23,9 @@ router.get("/", async (req, res, next) => {
 router.get(
   "/search",
   schemaValidator([
-    query("sender").isEmail(),
-    query("startingDate").isISO8601()
+    query("sender").optional({nullable: true, checkFalsy: true}).isEmail(),
+    query("startingDate").isISO8601(),
+    query("emailAccountId").isNumeric()    
   ]),
   async (req, res, next) => {
     try {

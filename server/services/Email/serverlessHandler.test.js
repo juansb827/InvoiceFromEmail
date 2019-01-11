@@ -4,7 +4,7 @@ serverlessHandler.processPendingEmails({
       {
         "messageId": "19dd0b57-b21e-4ac1-bd88-01bbb068cb78",
         "receiptHandle": "MessageReceiptHandle",
-        "body": "{\"emailAccount\":\"juansb827@gmail.com\", \"userId\": \"1\", \"emailAccountId\": \"88\"}",
+        "body": "{\"emailAccount\":\"juansb827@gmail.com\", \"userId\": \"11\", \"emailAccountId\": \"3\"}",
         "attributes": {
           "ApproximateReceiveCount": "1",
           "SentTimestamp": "1523232000000",

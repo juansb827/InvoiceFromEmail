@@ -11,7 +11,7 @@ source bin/activate
 //Improve Error Logging
 //Use Caching for confParameters 
 
-SELECT * FROM "Emails"
+SELECT * FROM "Emails" order by ID DESC
 SELECT * FROM "Attachments" order by "emailId"
 UPDATE "Attachments" SET "processingState" = 'DOWNLOADED'
 UPDATE "Emails" SET "processingState" = 'UNPROCESSED'

@@ -52,11 +52,16 @@ async function searchEmails(emailAccountId, userId, companyId, searchParams ) {
 
   const connection = await imapHelper.getConnection(connectionConf);
   await connection.openBoxAsync("INBOX", true);
+
+  const imapParams = ['ALL'];
+  imapParams.push(['SINCE', searchParams.startingDate])
+  if (searchParams.sender) {
+    imapParams.push(['FROM', searchParams.sender])    
+  }    
   
   let emailIds = await imapHelper.findEmailIds(
     connection,
-    searchParams.startingDate,
-    searchParams.sender
+    imapParams
   );
 
   await connection.end();

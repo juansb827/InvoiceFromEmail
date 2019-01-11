@@ -96,3 +96,17 @@ export const createEmailAccount = (
       return res.data.redirectURL;
     });
 };
+
+export const searchEmails = (searchParams: {
+  startingDate: Date,
+  sender: string,
+  emailAccountId: number
+  [key: string]: any
+}) => {
+  return axios.get(`/emails/search/`, {
+    params: {...searchParams}
+  }).then(res => {
+    return res.data.foundEmails
+  })
+
+}

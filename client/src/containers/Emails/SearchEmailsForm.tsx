@@ -5,7 +5,7 @@ import { withStyles } from "@material-ui/core/styles";
 import { Formik, FormikProps, Form, Field, FieldProps } from "formik";
 import { connect } from "react-redux";
 
-import { Button, Divider, Typography } from "@material-ui/core/";
+import { Button, Divider, Typography, Card } from "@material-ui/core/";
 
 import CircularProgress from "@material-ui/core/CircularProgress";
 import * as yup from "yup";
@@ -15,18 +15,8 @@ import * as fieldFactory from "../../shared/forms/FieldFactory";
 import * as api from '../../api/api';
 import * as actions from '../../store/actions/index';
 import itemTypes from "../../store/itemTypes";
+import Dialog from '../../components/UI/Dialog/Dialog';
 
-const validationSchema = yup.object({
-  emailAddress: yup
-    .string()
-    .trim()
-    .email("Ingrese una direccón valida")
-    .required("Ingrese la dirección de email"),
-  emailProvider: yup
-    .string()
-    .trim()
-    .required("Email provider is required")
-});
 
 const styles: any = theme => ({
   root: {
@@ -51,27 +41,86 @@ const styles: any = theme => ({
   }
 });
 
+
+
 interface Props {
   classes: any;
   onSuccess: Function;
   [key: string]: any;
 }
-class SelectProvider extends React.Component<Props> {  
 
-  componentDidMount () {
-      console.log('A');
+const validationSchema = yup.object().shape({
+  emailAccountId: yup
+    .string()
+    .trim()    
+    .required("Ingrese la dirección de email"),
+  fromDate: yup  
+    .date()
+    .typeError("Fecha Invalida")
+    .required("Ingrese la fecha de inicio"),
+  toDate: yup
+    .date().typeError('Fecha Invalida') 
+    .required("Ingrese la fecha de final")         
+    .when('fromDate', (fromDate, schema) => {
+      
+      if(isNaN(fromDate.getTime())) {
+        return;
+      }
+      console.log(fromDate);
+      return yup.date().typeError('Fecha Invalida').min(fromDate, 'La fecha final no puede ser menor a la fecha inicial'); 
+      
+      
+    })
+    
+    
+    
+});
+
+const initialValues = { 
+  emailAccountId: 98, 
+  senderEmail: 'focuscontable@gmail.com', 
+          fromDate: "2018-09-20",
+          toDate: "2018-09-20" }
+
+
+class SelectProvider extends React.Component<Props> {  
+  
+  state = {
+    loading: false,
+    resultDialogOpen: false,    
+    foundEmailsCount: 0
+  }
+  
+  componentDidMount () {      
     this.props.onLoadEmailAccounts();
   }
   
+  handleToggleDialog = (open) => {
+    this.setState({ resultDialogOpen: open})
+  }
 
 
-  handleSubmit = values => {
-    console.log(values);
+  handleSubmit = (values, {resetForm, setSubmitting}) => {       
+    return api.searchEmails({
+      emailAccountId: values.emailAccountId,
+      startingDate: new Date(values.fromDate),
+      sender: values.senderEmail
+    }).then(res => {
+      this.setState({ 
+        foundEmailsCount: res,
+        resultDialogOpen: true
+      })
+      resetForm(initialValues);      
+    })
+    .finally(()=>{
+      setSubmitting(false);
+    })
   };
 
   render() {
     const { classes, loadingAccounts } = this.props;
-    
+    //const { loading } = this.state
+    //console.log('STATE', this.state);
 
     const accounts = this.props.emailAccounts.map(account => {
         return {
@@ -81,21 +130,22 @@ class SelectProvider extends React.Component<Props> {
     })
 
     let msgNoAccounts: any = ''
-        if (true || !loadingAccounts && accounts.length === 0) {
+        if (!loadingAccounts && accounts.length === 0) {
             msgNoAccounts = 
             (<Typography>No tiene cuentas de correo asociadas aun. <br/> En la seccion de configuración puede asociar cuentas de correo.</Typography>);
         }
 
     const form = formikBag => {
-      const { handleSubmit } = formikBag;
+      const { handleSubmit, isSubmitting } = formikBag;
+      console.log('FormikBag', formikBag);
       
       return (
         
         <form onSubmit={handleSubmit}>          
           <Typography variant="h6">Busqueda de Emails en Cuenta de Correo</Typography>
           <fieldFactory.WrappedSelectField
-            id="emailAccount"
-            name="emailAccount"
+            id="emailAccountId"
+            name="emailAccountId"
             className={classes.formControl}
             label="Cuenta de Correo"
             formikBag={formikBag}
@@ -115,16 +165,17 @@ class SelectProvider extends React.Component<Props> {
             />
 
             <fieldFactory.WrappedDatePicker
-              id="startingDate"
-              name="startingDate"
+              id="fromDate"
+              name="fromDate"
               className={classes.formControl}
               label="Fecha Inicio"
               formikBag={formikBag}
+              
             />
 
             <fieldFactory.WrappedDatePicker
-              id="startingDate"
-              name="startingDate"
+              id="toDate"
+              name="toDate"
               className={classes.formControl}
               label="Fecha Fin"
               formikBag={formikBag}
@@ -137,13 +188,13 @@ class SelectProvider extends React.Component<Props> {
                 variant="contained"
                 type="submit"
                 color="primary"
-                onClick={() => {}}
+                
                 
                 className={classes.button}
               >
                 Continuar
-              </Button>
-              
+              </Button>              
+              {isSubmitting && <CircularProgress className={classes.progress} />}
             </div>
           </div>
         </form>
@@ -151,12 +202,28 @@ class SelectProvider extends React.Component<Props> {
     };
 
     return (
+      <>
       <Formik
-        initialValues={{ emailAccount: "", senderEmail: "", startingDate: "1" }}
-        validationSchema={{}}
+        initialValues={initialValues}
+        validationSchema={validationSchema}
         onSubmit={this.handleSubmit}
         render={(formikBag: FormikProps<any>) => form(formikBag)}
       />
+      <Dialog           
+          open={this.state.resultDialogOpen} 
+          onClose={this.handleToggleDialog.bind(this, false)} >
+        {this.state.foundEmailsCount === 0 ? 
+          'No se han encontrado nuevos correos con los parámetros proporcionados':
+          ( 
+          <>
+            Se han encontrado {this.state.foundEmailsCount} nuevos correos
+            <br/> 
+            Se analizarán en busca de facturas.
+          </>)
+          }
+        
+      </Dialog>
+      </>      
     );
   }
 }

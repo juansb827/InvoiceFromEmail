@@ -20,19 +20,21 @@ async function registerUser(userInfo) {
     throw new AppError("Password is required", 400, "InvalidInput");
 
   const hashedPassword = await hashPassword(userInfo.password);
-  const secret = (await parameterStore.getParameters()).app_secret         
+  const secret = (await parameterStore.getParameters()).app_secret;
   let user;
-  try {
-    user = await User.create({
-      email: userInfo.email,
-      companyId: userInfo.companyId,
-      password: hashedPassword
-    });
-  } catch (err) {
-    throw new AppError("Error Saving the user", 500, "UnkownError", err);
-  }
 
-  const token = await createToken(user.id, userInfo.email, userInfo.companyId, secret);
+  user = await User.create({
+    email: userInfo.email,
+    companyId: userInfo.companyId,
+    password: hashedPassword
+  });
+
+  const token = await createToken(
+    user.id,
+    userInfo.email,
+    userInfo.companyId,
+    secret
+  );
   return token;
 }
 
@@ -49,61 +51,63 @@ async function hashPassword(password) {
 }
 
 async function authenticateUser(userInfo) {
-    
-    const { email, password, companyId } = userInfo;
-    if (!email)
-      throw new AppError("Email is required", 400, "InvalidInput");
-    if (!password)
-      throw new AppError("Password is required", 400, "InvalidInput"); 
-     
-    
-    
-    const user = await User.findOne({ where: {
-        email,
-        companyId
-    }});
+  const { email, password, companyId } = userInfo;
+  if (!email) throw new AppError("Email is required", 400, "InvalidInput");
+  if (!password)
+    throw new AppError("Password is required", 400, "InvalidInput");
 
-    if(!user)
-        throw new AppError("Invalid credentials", 401, "Unauthorized"); 
-        
-    const passwordIsValid = await bcrypt.compare(password, user.password);    
+  const user = await User.findOne({
+    where: {
+      email,
+      companyId
+    }
+  });
 
-    if(!passwordIsValid)
-        throw new AppError("Invalid credentials", 401, "Unauthorized"); 
+  if (!user) throw new AppError("Invalid credentials", 401, "Unauthorized");
 
-    const secret = (await parameterStore.getParameters()).app_secret         
+  const passwordIsValid = await bcrypt.compare(password, user.password);
 
-    return await createToken(user.id, user.email, user.companyId, secret);
+  if (!passwordIsValid)
+    throw new AppError("Invalid credentials", 401, "Unauthorized");
 
-    
+  const secret = (await parameterStore.getParameters()).app_secret;
+
+  return await createToken(user.id, user.email, user.companyId, secret);
 }
 
 async function validateRequest(req, res, next) {
   try {
-    const token = (req.body && req.body.access_token) ||
-  (req.query && req.query.access_token) ||
-  req.headers['x-access-token'];
+    const token =
+      (req.body && req.body.access_token) ||
+      (req.query && req.query.access_token) ||
+      req.headers["x-access-token"];
 
-  if (!token)
-    return next(new AppError('No token provided', 401, 'Unauthorized'));
-  const secret = (await parameterStore.getParameters()).app_secret;         
-  const decoded = await new Promise((resolve, reject) => {
-    jwt.verify(token, secret, function (err, decoded) {
-      if (err) {
-        if (err.expiredAt)
-          return reject(new AppError('Token Expired', 401, 'Unauthorized'));
-        reject(new AppError('Failed to authenticate token', 500, 'UnkownError', err));          
-      }
-      resolve(decoded);
+    if (!token)
+      return next(new AppError("No token provided", 401, "Unauthorized"));
+    const secret = (await parameterStore.getParameters()).app_secret;
+    const decoded = await new Promise((resolve, reject) => {
+      jwt.verify(token, secret, function(err, decoded) {
+        if (err) {
+          if (err.expiredAt)
+            return reject(new AppError("Token Expired", 401, "Unauthorized"));
+          reject(
+            new AppError(
+              "Failed to authenticate token",
+              500,
+              "UnkownError",
+              err
+            )
+          );
+        }
+        resolve(decoded);
+      });
     });
-  });  
 
-  req.userData = decoded;
-  next();
+    req.userData = decoded;
+    next();
   } catch (err) {
     next(err);
   }
-    
 }
 
 async function createToken(id, email, companyId, secret) {
@@ -122,8 +126,8 @@ async function createToken(id, email, companyId, secret) {
       (err, token) => {
         if (err) return reject(err);
         resolve({
-            ...tokenData,
-            token: token          
+          ...tokenData,
+          token: token
         });
       }
     );

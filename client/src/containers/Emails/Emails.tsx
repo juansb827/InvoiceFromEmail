@@ -11,7 +11,7 @@ class Emails extends Component {
 
 
   state = {
-    dialogOpen: true,
+    dialogOpen: false,
   }
 
   handleDialogToggled = (open) => {
@@ -22,7 +22,7 @@ class Emails extends Component {
     return (
       <>
         <Button variant="contained" onClick={this.handleDialogToggled.bind(this, true)} >
-          Default
+          Buscar Nuevos Correos
         </Button>
         <EmailTable />
         <Dialog           
