@@ -50,9 +50,11 @@ module.exports.attempToStartWorker = async (
     logger.info(
       `Started worker for account : '${emailAccountId}:${emailAddress}' `
     );
-    await startEmailWorker(accountInfo.address, connection);
+    //Worker is limited to process only 100 emails per run,
+    const pendingEmailsCount = await startEmailWorker(accountInfo.address, connection);
+    
     logger.info(
-      `Ended worker for account: '${emailAccountId}:${emailAddress}'`
+      `Ended worker for account: '${emailAccountId}:${emailAddress}', pendingEmailsCount:${pendingEmailsCount}`
     );
     await connection.end();
   } catch (err) {

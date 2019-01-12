@@ -77,7 +77,7 @@ const validationSchema = yup.object().shape({
 });
 
 const initialValues = { 
-  emailAccountId: 98, 
+  emailAccountId: 3, 
   senderEmail: 'focuscontable@gmail.com', 
           fromDate: "2018-09-20",
           toDate: "2018-09-20" }

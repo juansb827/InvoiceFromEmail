@@ -6,6 +6,7 @@ module.exports = (sequelize, DataTypes) => {
         size: DataTypes.INTEGER,
         encoding: DataTypes.STRING,
         fileLocation: DataTypes.STRING,
+        retries: DataTypes.INTEGER,
         errorCause: DataTypes.STRING,
         processingState: {
             /**

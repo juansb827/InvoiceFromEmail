@@ -12,73 +12,85 @@ const {
 
 const { Op } = Sequelize;
 
-
-
-
 module.exports = async (invoiceXML, attachment, companyId) => {
-  
- 
-  
   if (!companyId) {
     throw new Error("companyId is required");
   }
 
-  const invoice = await invoices.extractData(invoiceXML);
-
-  await sequelize.transaction(async t => {
-    const invoiceHeader = invoice.header;
-    invoiceHeader.companyId = companyId;
-
-    if (attachment) {
-      invoiceHeader.emailId = attachment.emailId;
-    }
-
-    const savedInvoice = await Invoice.build(invoiceHeader).save({
-      transaction: t
-    });
-
-    invoice.items.forEach(item => {
-      item.invoiceId = savedInvoice.id;
-    });
-
-    let last = InvoiceItem.bulkCreate(invoice.items, { transaction: t });
-
-    if (!attachment) {
-      return last;
-    }
-
-    await last;
-
-    return Attachment.update(
+  let invoice = null;
+  try {    
+    invoice = await invoices.extractData(invoiceXML);
+  } catch (e) {
+    await Attachment.update(
       {
-        processingState: "DONE"
+        processingState: "ERROR",
+        errorCause: e.message
       },
       {
-        transaction: t,
         where: { id: attachment.id }
       }
-    );
-  });
+    );    
+    //TODO: error managment when its file upload
+  }
 
+  if (invoice) {
+    await sequelize.transaction(async t => {
+      const invoiceHeader = invoice.header;
+      invoiceHeader.companyId = companyId;
+
+      if (attachment) {
+        invoiceHeader.emailId = attachment.emailId;
+      }
+
+      const savedInvoice = await Invoice.build(invoiceHeader).save({
+        transaction: t
+      });
+
+      invoice.items.forEach(item => {
+        item.invoiceId = savedInvoice.id;
+      });
+
+      let last = InvoiceItem.bulkCreate(invoice.items, { transaction: t });
+
+      if (!attachment) {
+        return last;
+      }
+
+      await last;
+
+      return Attachment.update(
+        {
+          processingState: "DONE"
+        },
+        {
+          transaction: t,
+          where: { id: attachment.id }
+        }
+      );
+    });
+  }
   if (!attachment) {
     return;
   }
 
-  const count = await Attachment.count({
+  const attachmentList = await Attachment.findAll({
     where: {
+      /*
       [Op.and]: [
-        { processingState: { [Op.ne]: "DONE" } },
+        { processingState: { [Op.ne]: "ERROR" }},
+        { processingState: { [Op.ne]: "ERROR" }},
+        { processingState: { [Op.ne]: "SKIPPED" }},
         { processingState: { [Op.ne]: null } }
-      ],
+      ],*/
       emailId: attachment.emailId
     }
   });
 
-  if (count === 0) {
-    //Email has no pending attachments left
+  const newEmailState = updateStateIfNecessary(attachmentList);
+  if (newEmailState) {
     await Email.update(
       {
-        processingState: "DONE"
+        processingState: newEmailState
       },
       {
         where: { id: attachment.emailId }
@@ -86,3 +98,4 @@ module.exports = async (invoiceXML, attachment, companyId) => {
     );
   }
 };
+

@@ -7,7 +7,7 @@ const { Email, Attachment } = require("../../db/models");
 const { sequelize, Sequelize } = require("../../db/models");
 const imapHelper = require("./../../lib/imapHelper/");
 const Op = Sequelize.Op;
-
+const appUtils = require('./../../lib/appUtils');
 const AWS = require("aws-sdk");
 const AWS_DEFAULT_REGION = process.env.AWS_DEFAULT_REGION;
 AWS.config.update({ region: AWS_DEFAULT_REGION });
@@ -21,6 +21,7 @@ module.exports = {
 };
 const XML_INVOICE_REGEX = /^FACE_[a-fA-F0-9]+\.XML$/;
 const XML_MAX_SIZE_BYTES = Math.pow(10, 1) //1 megabyte;
+const MAX_RETRIES_FAILED_EMAIL = 3;
 /**
 * @description - starts a worker for the email account    
   All State is managed through DB to achieve a Fault-Tolerant Process:
@@ -31,22 +32,19 @@ const XML_MAX_SIZE_BYTES = Math.pow(10, 1) //1 megabyte;
        download and save info(subject, date, metadata of the attachments)  
        change the status to 'INFO'
   3 - for each email 
-        - for each attachment with status 'UNPROCESSED' or (currentTime - PROCESSING_STARTED > X seconds)
+        - for each attachment with status 'UNPROCESSED' or ('ERROR' and retries <3)
             - if it is not an Invoice
                 - change status to 'SKIPPED':
                 - If there are no more attachments with status 'UNPROCESSED' 
                         change the Status of the email to 'PROCESSED'
             - if it is an Invoice
-                - download it if not already downloaded (FileURI == null)
-                - Change Attachment status to 'PROCESSING' and set time 'PROCESSING_STARTED' to currentTime, 
-                    So after 'X' seconds time the attachment will be considered as UNPROCESSED,
-                    this is necessary to deal with the fact that the Invoice-Proccesor may fail for 
-                    some reason
+                - download it 
+                - Change Attachment status to 'DOWNLOADED'                     
                 - trigger an Invoice-Processor, it will:                 
                     - Extract Invoice Data and save it in DB
                     - Mark the attachment as 'PROCESSED'
                     - Check DB and if there are no more attachments with status 'UNPROCESSED' 
-                        for the  email it will change its status to 'PROCESSED'          
+                        for the  email it will change its status to 'DONE'          
   
 */
 async function startEmailWorker(emailAccount, connection) {
@@ -56,7 +54,9 @@ async function startEmailWorker(emailAccount, connection) {
   if (pendingEmails.length === 0) {
     return;
   }
-  const restartAfterFinish = pendingEmails.length < result.count;
+  let pendingAfterWorkersEnds = 
+    Math.max(result.count - pendingEmails.length, 0); //Just in case
+    
 
   const unprocessedEmails = pendingEmails.filter(email => {
     return email.processingState === "UNPROCESSED"; //Emails without attachment metadata
@@ -74,19 +74,24 @@ async function startEmailWorker(emailAccount, connection) {
   //For Each Email downloads its attachments (if not already downloaded)
   for (email of pendingEmails) {
     for (attach of email.Attachments) {
-      if (attach.processingState != "UNPROCESSED") {
+      let hadError = false; //Error downloading/registi
+      if (attach.processingState != "UNPROCESSED" &&
+          attach.processingState != "ERROR" ||
+          attach.retries >= MAX_RETRIES_FAILED_EMAIL) {
         continue;
       }
-
+      if (attach.processingState === 'ERROR') {
+        attach.retries = (attach.retries || 0) + 1;
+      }
+      let processingState = "SKIPPED";
       try {
         const extention = attach.name.slice(-3).toUpperCase();
-        let processingState = "SKIPPED";
 
         if (XML_INVOICE_REGEX.test(attach.name.toUpperCase())) {
           //PDF,XML "XML".includes(extention)
           if (attach.size > XML_MAX_SIZE_BYTES) {
-            processingState = "ERROR";
-            attach.errorCause = `El archivo tiene un tamaño de mas de ${XML_MAX_SIZE_BYTES} Bytes`;
+            //attach.retries = MAX_RETRIES_FAILED_EMAIL;
+            throw new Error(`El archivo tiene un tamaño de mas de ${XML_MAX_SIZE_BYTES} Bytes`);            
           } else {
             const attachmentStream = await imapHelper.getAttachmentStream(
               email.uid,
@@ -108,15 +113,36 @@ async function startEmailWorker(emailAccount, connection) {
             attach.fileLocation = fileURI;
           }
         }
-
-        attach.processingState = processingState;
-        await attach.save();
+        
       } catch (err) {
+        processingState = "ERROR";
+        attach.errorCause = err.message;
+        logger.error(err);
+        hadError = true;
+      }
+      attach.processingState = processingState;
+      try {
+        await attach.save();
+      } catch (e) {
+        hadError = true;
         logger.error(err);
       }
+      if (hadError && (attach.retries || 0) < MAX_RETRIES_FAILED_EMAIL ) {
+        pendingAfterWorkersEnds++;
+      }
+      
+      
+      
     }
     if (email.Attachments) {
-      updateStateIfNecessary(email);
+      //Only Asign DONE to the email when all attachments have been processed
+      //Only Asign ERROR to the email when the rest he rest of the emails attachments with error
+      //have 3 o more retries
+      const updatedState = appUtils.checkIfStateIfDoneOrError(email.Attachments);
+      if (updatedState) {
+        email.processingState = updatedState;
+        email.save();
+      }
     }
   }
   //Sends files that seem to be an invoice to the InvoiceQ
@@ -136,6 +162,8 @@ async function startEmailWorker(emailAccount, connection) {
       }
     }
   }
+
+  return pendingAfterWorkersEnds;
 }
 
 async function updateStateIfNecessary(email) {

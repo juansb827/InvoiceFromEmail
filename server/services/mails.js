@@ -19,6 +19,7 @@ const AWS = require("aws-sdk");
 const AWS_DEFAULT_REGION = process.env.AWS_DEFAULT_REGION;
 AWS.config.update({ region: AWS_DEFAULT_REGION });
 const sqs = new AWS.SQS({ apiVersion: "2012-11-05" });
+const appUtils = require('../lib/appUtils');
 
 module.exports = {
   searchEmails,
@@ -75,7 +76,7 @@ async function searchEmails(emailAccountId, userId, companyId, searchParams ) {
 
   //
   if (unproccessedEmails.length !== 0) {
-    putOnPendingEmailQ(accountInfo.address, userId, accountInfo.id);
+    appUtils.putOnPendingEmailQ(accountInfo.address, userId, accountInfo.id, SQS_PENDING_EMAIL_QUEUE_URL)    
   }
 
   return unproccessedEmails;
@@ -125,32 +126,8 @@ function bulkRegister(ids, emailAccount, companyId) {
 }
 
 
-async function putOnPendingEmailQ(emailAccount, userId, emailAccountId) {
 
-  var payload = {
-    emailAccount,
-    userId,
-    emailAccountId
-  };
 
-  var params = {
-    DelaySeconds: 0,
-    MessageAttributes: {},
-    MessageBody: JSON.stringify(payload),
-    QueueUrl: SQS_PENDING_EMAIL_QUEUE_URL
-  };
-
-  return new Promise((resolve, reject) => {
-    sqs.sendMessage(params, function(err, data) {
-      if (err) {
-        reject(err);
-      } else {
-        console.log("Success", data.MessageId);
-        resolve();
-      }
-    });
-  });
-}
 
 
 

@@ -14,9 +14,9 @@ source bin/activate
 SELECT * FROM "Emails" order by ID DESC
 SELECT * FROM "Attachments" order by "emailId"
 UPDATE "Attachments" SET "processingState" = 'DOWNLOADED'
-UPDATE "Emails" SET "processingState" = 'UNPROCESSED'
+UPDATE "Emails" SET "processingState" = 'UNPROCESSED';
 DELETE FROM "Emails";
-DELETE FROM "Attachments"
+DELETE FROM "Attachments";
 SELECT * FROM "Invoices"
 SELECT * FROM "InvoiceItems"
 delete FROM "Invoices";

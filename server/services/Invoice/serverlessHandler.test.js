@@ -4,7 +4,7 @@ serverlessHandler.processInvoice({
       {
         "messageId": "19dd0b57-b21e-4ac1-bd88-01bbb068cb78",
         "receiptHandle": "MessageReceiptHandle",
-        "body": "{\"fileLocation\":{\"bucketName\":\"invoice-processor\",\"fileKey\":\"3/face_F0900547176003a6a6278.xml\"},\"companyId\":3,\"attachment\":{\"id\":19,\"emailId\":1}}",
+        "body": "{\"fileLocation\":{\"bucketName\":\"invoice-processor\",\"fileKey\":\"2\/e0cf40fba08ffa9512ab6bb919a741a0-face_F0900547176003a6a6278.xml\"},\"companyId\":2,\"attachment\":{\"id\":72,\"emailId\":1009}}",  
         "attributes": {
           "ApproximateReceiveCount": "1",
           "SentTimestamp": "1523232000000",
