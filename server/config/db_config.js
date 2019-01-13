@@ -1,7 +1,7 @@
 require('dotenv').config()
 module.exports = {
   "development": {
-    logging: true,
+    logging: false,
     "url": process.env.DB_CONNECTION_URL,
     "dialect": "postgres",
     "ssl": true  ,

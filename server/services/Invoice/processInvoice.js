@@ -9,7 +9,7 @@ const {
   sequelize,
   Sequelize
 } = require("../../db/models");
-
+const appUtils = require('../../lib/appUtils');
 const { Op } = Sequelize;
 
 module.exports = async (invoiceXML, attachment, companyId) => {
@@ -86,7 +86,7 @@ module.exports = async (invoiceXML, attachment, companyId) => {
     }
   });
 
-  const newEmailState = updateStateIfNecessary(attachmentList);
+  const newEmailState = appUtils.checkIfStateIfDoneOrError(attachmentList);
   if (newEmailState) {
     await Email.update(
       {

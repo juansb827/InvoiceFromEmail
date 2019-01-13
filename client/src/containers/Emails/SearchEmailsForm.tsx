@@ -4,6 +4,7 @@ import PropTypes from "prop-types";
 import { withStyles } from "@material-ui/core/styles";
 import { Formik, FormikProps, Form, Field, FieldProps } from "formik";
 import { connect } from "react-redux";
+import withErrorHandler from "../../hoc/withErrorHandler";
 
 import { Button, Divider, Typography, Card } from "@material-ui/core/";
 
@@ -16,7 +17,7 @@ import * as api from '../../api/api';
 import * as actions from '../../store/actions/index';
 import itemTypes from "../../store/itemTypes";
 import Dialog from '../../components/UI/Dialog/Dialog';
-
+import axios from '../../axios-instance';
 
 const styles: any = theme => ({
   root: {
@@ -77,7 +78,7 @@ const validationSchema = yup.object().shape({
 });
 
 const initialValues = { 
-  emailAccountId: 3, 
+  emailAccountId: 2, 
   senderEmail: 'focuscontable@gmail.com', 
           fromDate: "2018-09-20",
           toDate: "2018-09-20" }
@@ -104,13 +105,17 @@ class SelectProvider extends React.Component<Props> {
     return api.searchEmails({
       emailAccountId: values.emailAccountId,
       startingDate: new Date(values.fromDate),
+      endingDate: new Date(values.toDate),
       sender: values.senderEmail
     }).then(res => {
       this.setState({ 
         foundEmailsCount: res,
         resultDialogOpen: true
       })
-      resetForm(initialValues);      
+      if (res !== 0) {
+        resetForm(initialValues);      
+      }
+      
     })
     .finally(()=>{
       setSubmitting(false);
@@ -251,7 +256,8 @@ export default
     connect(
         mapStateToProps,
         mapDispatchToProps)(
-            withStyles(styles, { withTheme: true })(SelectProvider)
+            withStyles(styles, { withTheme: true })(
+              withErrorHandler(SelectProvider, axios))
         )
   
     

@@ -1,10 +1,10 @@
-const serverlessHandler = require('./serverlessHandler');
+  const serverlessHandler = require('./serverlessHandler');
 serverlessHandler.processInvoice({
     "Records": [
       {
         "messageId": "19dd0b57-b21e-4ac1-bd88-01bbb068cb78",
         "receiptHandle": "MessageReceiptHandle",
-        "body": "{\"fileLocation\":{\"bucketName\":\"invoice-processor\",\"fileKey\":\"2\/e0cf40fba08ffa9512ab6bb919a741a0-face_F0900547176003a6a6278.xml\"},\"companyId\":2,\"attachment\":{\"id\":72,\"emailId\":1009}}",  
+        "body": "{\"fileLocation\":{\"bucketName\":\"invoice-processor\",\"fileKey\":\"2\/e0cf40fba08ffa9512ab6bb919a741a0-face_F0900547176003a6a6278.xml\"},\"companyId\":9,\"attachment\":{\"id\":51,\"emailId\":1052}}",  
         "attributes": {
           "ApproximateReceiveCount": "1",
           "SentTimestamp": "1523232000000",

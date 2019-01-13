@@ -58,7 +58,7 @@ const withErrorHandler = (WrappedComponent, axios) => {
           <Dialog
             open={!!this.state.error}
             onClose={this.errorConfirmedHandler} >
-            {error && <div>{error.name || 'Error'}<br/>{error.message}</div>}
+            {error && <div>Error<br/>{error.message}</div>}
             
           </Dialog>
           <WrappedComponent {...this.props} />

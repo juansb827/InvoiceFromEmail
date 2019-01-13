@@ -12,6 +12,7 @@ source bin/activate
 //Use Caching for confParameters 
 
 SELECT * FROM "Emails" order by ID DESC
+SELECT COUNT(*) FROM "Emails" WHERE "processingState" = 'UNPROCESSED'
 SELECT * FROM "Attachments" order by "emailId"
 UPDATE "Attachments" SET "processingState" = 'DOWNLOADED'
 UPDATE "Emails" SET "processingState" = 'UNPROCESSED';

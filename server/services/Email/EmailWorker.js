@@ -20,7 +20,7 @@ module.exports = {
   startEmailWorker
 };
 const XML_INVOICE_REGEX = /^FACE_[a-fA-F0-9]+\.XML$/;
-const XML_MAX_SIZE_BYTES = Math.pow(10, 1) //1 megabyte;
+const XML_MAX_SIZE_BYTES = Math.pow(10, 6) //1 megabyte;
 const MAX_RETRIES_FAILED_EMAIL = 3;
 /**
 * @description - starts a worker for the email account    
@@ -52,16 +52,16 @@ async function startEmailWorker(emailAccount, connection) {
   const pendingEmails = result.data;
 
   if (pendingEmails.length === 0) {
-    return;
+    return false;
   }
-  let pendingAfterWorkersEnds = 
-    Math.max(result.count - pendingEmails.length, 0); //Just in case
+  let pendingAfterWorkersEnds = result.morePending;
+    
     
 
   const unprocessedEmails = pendingEmails.filter(email => {
     return email.processingState === "UNPROCESSED"; //Emails without attachment metadata
   });
-
+  
   if (unprocessedEmails.length !== 0) {
     //Finds the Email and Attachment Metadata and Updates the model instance accordingly
     await getEmailsData(unprocessedEmails, connection);
@@ -70,7 +70,7 @@ async function startEmailWorker(emailAccount, connection) {
       await saveEmailsData(email);
     }
   }
-
+  
   //For Each Email downloads its attachments (if not already downloaded)
   for (email of pendingEmails) {
     for (attach of email.Attachments) {
@@ -128,7 +128,7 @@ async function startEmailWorker(emailAccount, connection) {
         logger.error(err);
       }
       if (hadError && (attach.retries || 0) < MAX_RETRIES_FAILED_EMAIL ) {
-        pendingAfterWorkersEnds++;
+        pendingAfterWorkersEnds = true;
       }
       
       
@@ -147,8 +147,7 @@ async function startEmailWorker(emailAccount, connection) {
   }
   //Sends files that seem to be an invoice to the InvoiceQ
   for (email of pendingEmails) {
-    for (attach of email.Attachments) {
-      const extention = attach.name.slice(-3).toUpperCase();
+    for (attach of email.Attachments) {      
       if (
         attach.processingState === "DOWNLOADED" &&
         XML_INVOICE_REGEX.test(attach.name.toUpperCase())
@@ -166,58 +165,39 @@ async function startEmailWorker(emailAccount, connection) {
   return pendingAfterWorkersEnds;
 }
 
-async function updateStateIfNecessary(email) {
-  let hasError = false;
-  const total = email.Attachments.reduce((total, attach) => {
-    const { processingState } = attach;
-    if (processingState === "ERROR") {
-      hasError = true;
-      return total + 1;
-    }
 
-    if (processingState === "DONE" || processingState === "SKIPPED") {
-      return total + 1;
-    }
-
-    return total;
-  }, 0);
-
-  let updatedState = null;
-  if (total === email.Attachments.length) {
-    updatedState = "DONE";
-    if (hasError) {
-      updatedState = "ERROR";
-    }
-  }
-  
-  if (updatedState) {
-    email.processingState = updatedState;
-    email.save();
-  }
-}
 
 /**
  * @description - gets the emails that are not completely processed
+ * @returns  {
+ *  data: 
+ *  morePending: 
+ * }
  */
 async function getPendingEmails(emailAccount) {
   const maxEmails = 100;
-  const data = await Email.findAndCountAll({
-    include: [Attachment],
-    where: {
-      emailAccount: emailAccount,
-      [Op.and]: [
-        { processingState: { [Op.ne]: "DONE" } },
-        { processingState: { [Op.ne]: null } }
-      ]
-    },
+  const where =  {
+    emailAccount: emailAccount,
+    [Op.and]: [
+      { processingState: { [Op.ne]: "ERROR" }},
+      { processingState: { [Op.ne]: "DONE" }},
+      { processingState: { [Op.ne]: null } }
+    ]
+  }
+  const data = await Email.findAll({
+    include: [Attachment],    
+    where,
     order: [["id", "ASC"]],
     offset: 0,
     limit: maxEmails
   });
-
+  //Can't use findAndCount because of the include (which does a JOIN)
+  const count = await Email.count({ 
+    where
+  })
   return {
-    data: data.rows,
-    count: data.count
+    data,
+    morePending: (count - data.length) > 0
   };
 }
 
@@ -277,6 +257,7 @@ async function getEmailsData(unproccessedEmails, connection) {
 var saveEmailsData = async message => {
   return sequelize.transaction(t => {
     message.processingState = email.attachments === 0 ? "DONE" : "INFO";
+    message.subject = (message.subject || '').slice(0, 255);
     let chain = message.save({
       transaction: t
     });

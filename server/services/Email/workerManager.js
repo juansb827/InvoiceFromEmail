@@ -3,10 +3,11 @@ const { startEmailWorker } = require("./EmailWorker");
 const imapHelper = require("../../lib/imapHelper");
 const emailAccountService = require("./../emailAccount");
 let createClient = require("./../../cache/redis");
+const appUtils = require('../../lib/appUtils');
 let redis = null;
 
 const LOCK_DURATION = 20;
-
+const SQS_PENDING_EMAIL_QUEUE_URL = process.env.SQS_PENDING_EMAIL_QUEUE_URL;
 
 /**
  * There can only be a worker of the same email account at a given moment
@@ -28,7 +29,10 @@ module.exports.attempToStartWorker = async (
 
   const renewInterval = setInterval(async () => {
     logger.info(`Readquiring lock for '${emailAccountId}:${emailAddress}'`);
-    await renewLock(emailAccountId);
+    const couldRenew = await renewLock(emailAccountId);
+    if (!couldRenew) {
+      throw new Error(`Could not readquire lock for '${emailAccountId}:${emailAddress}`);
+    }
   }, 15000);
 
   try {
@@ -50,20 +54,33 @@ module.exports.attempToStartWorker = async (
     logger.info(
       `Started worker for account : '${emailAccountId}:${emailAddress}' `
     );
-    //Worker is limited to process only 100 emails per run,
-    const pendingEmailsCount = await startEmailWorker(accountInfo.address, connection);
+    //Worker is limited to process only upto 100 emails per run
+    const pendingEmails = await startEmailWorker(accountInfo.address, connection);
     
     logger.info(
-      `Ended worker for account: '${emailAccountId}:${emailAddress}', pendingEmailsCount:${pendingEmailsCount}`
+      `Ended worker for account: '${emailAccountId}:${emailAddress}', pendingEmails:${pendingEmails}`
     );
-    await connection.end();
-  } catch (err) {
-    throw err;
-  } finally {
+
     clearInterval(renewInterval);
     logger.info(`Releasing lock for '${emailAccountId}:${emailAddress}'`);
     await releaseLock(emailAccountId);
-  }
+    logger.info(`Released lock for '${emailAccountId}:${emailAddress}'`);
+    
+    if (pendingEmails) {
+      logger.info(`Pending Emails, scheduling another run`);
+      await appUtils.putOnPendingEmailQ(accountInfo.address, userId, emailAccountId, SQS_PENDING_EMAIL_QUEUE_URL)    
+    }
+    
+    await connection.end();
+  } catch (err) {
+    clearInterval(renewInterval);
+    logger.info(`Releasing lock for '${emailAccountId}:${emailAddress}'`);
+    await releaseLock(emailAccountId);
+    logger.info(`Released lock for '${emailAccountId}:${emailAddress}'`);
+    throw err;
+  } 
+    
+  
 };
 
 function getRedisConnection() {

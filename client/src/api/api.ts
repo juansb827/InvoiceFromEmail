@@ -99,7 +99,8 @@ export const createEmailAccount = (
 
 export const searchEmails = (searchParams: {
   startingDate: Date,
-  sender: string,
+  endingDate: Date,
+  sender?: string,
   emailAccountId: number
   [key: string]: any
 }) => {

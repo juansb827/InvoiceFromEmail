@@ -32,7 +32,7 @@ module.exports.processPendingEmails =  (async function (event, context)   {
        body.userId, confParameters.pg_encrypt_password);   
   }catch(err ) {
     console.error("Error in worker for account: " + body.emailAccount + " " + err.stack);
-    return err;
+    throw err;
   }
   
   console.log('Function ends');

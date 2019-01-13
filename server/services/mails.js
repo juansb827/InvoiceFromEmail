@@ -56,6 +56,7 @@ async function searchEmails(emailAccountId, userId, companyId, searchParams ) {
 
   const imapParams = ['ALL'];
   imapParams.push(['SINCE', searchParams.startingDate])
+  imapParams.push(['BEFORE', searchParams.endingDate])
   if (searchParams.sender) {
     imapParams.push(['FROM', searchParams.sender])    
   }    
@@ -66,6 +67,9 @@ async function searchEmails(emailAccountId, userId, companyId, searchParams ) {
   );
 
   await connection.end();
+  if (emailIds.length === 0) {
+    return [];
+  }
 
   //Registers only the Ids of the found emails
   let unproccessedEmails = await bulkRegister(

@@ -22,7 +22,7 @@ module.exports.processInvoice = async (event, context) => {
   try {
     for (let record of event.Records) {
       const parsedBody = JSON.parse(record.body);
-      console.log("Processing",  parsedBody.attachment, parsedBody.companyId);
+      console.log("Processing",  parsedBody.attachment, 'companyId:'+parsedBody.companyId);
       const invoiceXML = await new Promise((resolve, reject) => {
         let options = {
           Bucket: parsedBody.fileLocation.bucketName,
@@ -40,11 +40,11 @@ module.exports.processInvoice = async (event, context) => {
         parsedBody.companyId
       );
 
-      console.log("Successfully processed",  parsedBody.attachment, parsedBody.companyId);
+      console.log("Successfully processed",  parsedBody.attachment, 'companyId:' + parsedBody.companyId);
     }
   } catch (err) {
     console.error(err);
-    return err;
+    throw err;
   }
 
   return response;
