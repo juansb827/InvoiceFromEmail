@@ -5,6 +5,8 @@ export {
 
 export {
     changeItemsPage,
-    selectItem
+    selectItem,
+    changeItemsFilter,
+    reloadItems
        
 } from './item'   

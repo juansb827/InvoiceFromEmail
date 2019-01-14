@@ -3,23 +3,22 @@ require("dotenv").config();
 const Promise = require("bluebird");
 const crypto = require("crypto");
 
-
 const { sequelize, Sequelize } = require("../db/models");
 
 const { Email, Attachment } = require("../db/models");
-const imapHelper = require('imapHelper');
-const utils = require('./utils');
+const imapHelper = require("imapHelper");
+const utils = require("./utils");
 const emailErrors = require("./../lib/imapHelper/Errors");
-const emailAccountService = require('./emailAccount');
+const emailAccountService = require("./emailAccount");
 const logger = require("../utils/logger");
-const parameterStore = require('../lib/parameterStore');
+const parameterStore = require("../lib/parameterStore");
 const SQS_PENDING_EMAIL_QUEUE_URL = process.env.SQS_PENDING_EMAIL_QUEUE_URL;
 
 const AWS = require("aws-sdk");
 const AWS_DEFAULT_REGION = process.env.AWS_DEFAULT_REGION;
 AWS.config.update({ region: AWS_DEFAULT_REGION });
 const sqs = new AWS.SQS({ apiVersion: "2012-11-05" });
-const appUtils = require('../lib/appUtils');
+const appUtils = require("../lib/appUtils");
 
 module.exports = {
   searchEmails,
@@ -34,10 +33,9 @@ module.exports = {
  * @param emailAccount
  * @param searchParams
  */
-async function searchEmails(emailAccountId, userId, companyId, searchParams ) {
+async function searchEmails(emailAccountId, userId, companyId, searchParams) {
+  const confParameters = await parameterStore.getParameters();
 
-  const confParameters = await parameterStore.getParameters();  
-  
   const accountInfo = await emailAccountService.getDecryptedCredentials(
     emailAccountId,
     userId,
@@ -54,17 +52,14 @@ async function searchEmails(emailAccountId, userId, companyId, searchParams ) {
   const connection = await imapHelper.getConnection(connectionConf);
   await connection.openBoxAsync("INBOX", true);
 
-  const imapParams = ['ALL'];
-  imapParams.push(['SINCE', searchParams.startingDate])
-  imapParams.push(['BEFORE', searchParams.endingDate])
+  const imapParams = ["ALL"];
+  imapParams.push(["SINCE", searchParams.startingDate]);
+  imapParams.push(["BEFORE",  searchParams.endingDate]);
   if (searchParams.sender) {
-    imapParams.push(['FROM', searchParams.sender])    
-  }    
-  
-  let emailIds = await imapHelper.findEmailIds(
-    connection,
-    imapParams
-  );
+    imapParams.push(["FROM", searchParams.sender]);
+  }
+
+  let emailIds = await imapHelper.findEmailIds(connection, imapParams);
 
   await connection.end();
   if (emailIds.length === 0) {
@@ -76,11 +71,16 @@ async function searchEmails(emailAccountId, userId, companyId, searchParams ) {
     emailIds,
     accountInfo.address,
     companyId
-  ); 
+  );
 
   //
   if (unproccessedEmails.length !== 0) {
-    appUtils.putOnPendingEmailQ(accountInfo.address, userId, accountInfo.id, SQS_PENDING_EMAIL_QUEUE_URL)    
+    appUtils.putOnPendingEmailQ(
+      accountInfo.address,
+      userId,
+      accountInfo.id,
+      SQS_PENDING_EMAIL_QUEUE_URL
+    );
   }
 
   return unproccessedEmails;
@@ -129,22 +129,77 @@ function bulkRegister(ids, emailAccount, companyId) {
   });
 }
 
-
-
-
-
-
-
+//TODO
+//
 async function getEmailsByCompany(companyId, options) {
-  
-  const data = await Email.findAndCountAll({
-    where: { companyId },
+  const queryOptions = {
     ...utils.getPaginationValues(options),
-    order: [['id', 'DESC']]
+    order: [["id", "DESC"]],
     
-  })  
+  };
+
+  const where = {
+    companyId
+  }
+  queryOptions.where = where;
+
+  if (options.onlyWithInvoice) {
+    where.invoiceCount= {
+      [Sequelize.Op.gt]: 0
+    }
+  }
+
+  const data = await Email.findAndCountAll(queryOptions);
+
   return {
     data: data.rows,
     count: data.count
+  };
+}
+async function getEmailsByCompany2(companyId, options) {
+  const queryOptions = {
+    ...utils.getPaginationValues(options),
+    order: [["id", "DESC"]],
+    where: {
+      companyId
+    }
+  };
+
+  if (options.onlyWithInvoice) {
+    queryOptions.attributes = {
+      include: [
+        [
+          sequelize.fn("COUNT", sequelize.col("Attachments.emailId")),
+          "AttachCount"
+        ]
+      ]
+    };
+
+    queryOptions.include = [
+      {
+        model: Attachment,
+        attributes: [],
+        duplicating: false
+        /*
+      where: {
+        processingState: 'SKIPPED'
+      } */
+      }
+    ];
+    queryOptions.group = '"Email.id"';
+    //queryOptions.having = sequelize.where(sequelize.fn('COUNT', sequelize.col('Attachments.emailId')), '>', 0)
+  }
+
+  const data = await Email.findAll(queryOptions);
+  //Count gets bugged when there is a 'group' in the options
+  //and sends all the data so we have to remove unnecessary all the columns
+  queryOptions.attributes = [
+    sequelize.fn("COUNT", sequelize.col("Attachments.emailId"))
+  ];
+  const count = await Email.count(queryOptions);
+
+  return {
+    data: data,
+    count: count.length
   };
 }

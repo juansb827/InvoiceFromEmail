@@ -4,9 +4,10 @@ import Typography from "@material-ui/core/Typography";
 import CircularProgress from '@material-ui/core/CircularProgress';
 import { withStyles } from "@material-ui/core/styles";
 
-const toolbarStyles = theme => ({
+const toolbarStyles: any = theme => ({
     root: {
       paddingRight: theme.spacing.unit,
+      flexWrap: 'wrap'
     },
     spacer: {
       flex: '1 1 100%',
@@ -22,13 +23,16 @@ const toolbarStyles = theme => ({
     },
     invisible: {
       opacity: 0
+    },
+    customControls: {      
+      width: '100%'
     }
   });
   
   interface Props {
     title: string;
     classes: any;
-    loading: boolean;
+    loading: boolean;    
   }
 
   const TableToolbar: React.StatelessComponent<Props> = props => {
@@ -45,6 +49,9 @@ const toolbarStyles = theme => ({
         <CircularProgress className={
           [classes.progress, 
            props.loading ? '': classes.invisible ].join(' ')}  />
+        <div className={classes.customControls}>
+            {props.children}
+        </div>   
       </Toolbar>
     );
   };

@@ -37,6 +37,7 @@ const styles: any = theme => ({
 
 interface Props {
     classes: any;
+    customControls?: any;
     title: string;
     onPageChange: any;  //event, page
     rows: Array<any>;
@@ -58,7 +59,9 @@ interface Props {
     
     return (
         <Paper className={classes.root}>
-          <TableToolbar title={title} loading={props.loading} />   
+          <TableToolbar title={title} loading={props.loading} >   
+            {props.customControls}
+          </TableToolbar>
           <Table className={classes.table}>
             <TableHead>
               <TableRow>

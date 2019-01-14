@@ -3,14 +3,17 @@ import axios from "../axios-instance";
 interface PaginationOptions {
   pageNumber: number;
   rowsPerPage: number;
+  filters?: {
+    [key: string]: any
+  };
 }
 
-export const getInvoices = (pageNumber, rowsPerPage) => {
+export const getInvoices = (options: PaginationOptions) => {
   return axios
     .get(`/invoices`, {
       params: {
-        page_number: pageNumber,
-        page_size: rowsPerPage
+        page_number: options.pageNumber,
+        page_size: options.rowsPerPage
       }
     })
     .then(res => {
@@ -21,12 +24,12 @@ export const getInvoices = (pageNumber, rowsPerPage) => {
     });
 };
 
-export const getInvoiceItems = (invoiceId, pageNumber, rowsPerPage) => {
+export const getInvoiceItems = (invoiceId, options: PaginationOptions) => {
   return axios
     .get(`/invoices/${invoiceId}/items`, {
       params: {
-        page_number: pageNumber,
-        page_size: rowsPerPage
+        page_number: options.pageNumber,
+        page_size: options.rowsPerPage
       }
     })
     .then(res => {
@@ -38,12 +41,19 @@ export const getInvoiceItems = (invoiceId, pageNumber, rowsPerPage) => {
 };
 
 export const getEmails = (options: PaginationOptions) => {
+
+  const queryParams = {
+    page_number: options.pageNumber,
+    page_size: options.rowsPerPage,       
+  }
+
+  if (options.filters) {
+    Object.assign(queryParams, options.filters);
+  }  
+
   return axios
     .get(`/emails`, {
-      params: {
-        page_number: options.pageNumber,
-        page_size: options.rowsPerPage
-      }
+      params: queryParams
     })
     .then(res => {
       return {

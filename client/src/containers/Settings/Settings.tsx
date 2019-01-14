@@ -23,7 +23,7 @@ const headerColumns = [
 const emails = class extends React.Component<any> {
   state = {
     itemsOpen: true,
-    accountDialogOpen: true
+    accountDialogOpen: false  
   };
 
   componentDidMount() {
@@ -109,7 +109,7 @@ const mapStateToProps = state => {
 const mapDispatchToProps = dispatch => {
   return {
     onPageChange: pageNumber => {
-      const fetchFn = api.getEmailsAccounts({pageNumber, rowsPerPage});
+      const fetchFn = api.getEmailsAccounts;
       const action = actions.changeItemsPage(itemTypes.EMAIL_ACCOUNT, pageNumber, rowsPerPage, fetchFn);      
       dispatch(action);
     },

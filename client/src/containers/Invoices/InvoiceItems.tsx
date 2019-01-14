@@ -60,7 +60,7 @@ const mapStateToProps = state => {
 const mapDispatchToProps = dispatch => {
   return {
     onPageChange: (pageNumber, invoiceId) => {      
-      const fetchFn = api.getInvoiceItems(invoiceId, pageNumber, rowsPerPage);
+      const fetchFn = api.getInvoiceItems.bind(null, invoiceId);
       dispatch(
         actions.changeItemsPage(itemTypes.INVOICE_ITEMS, pageNumber, rowsPerPage, fetchFn)
       )

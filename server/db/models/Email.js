@@ -21,6 +21,10 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: "UNPROCESSED"
       },
       attachments: DataTypes.INTEGER,
+      invoiceCount: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+      },
       /*
       matchingAttachments: DataTypes.INTEGER,
       attachmentsState: {

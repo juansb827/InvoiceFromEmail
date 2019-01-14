@@ -7,7 +7,8 @@ const initialState = {
     loading: false,        
     endpoint: null,
     selectedItem: null, 
-    rowsPerPage: 0
+    rowsPerPage: 0,
+    filters: {} 
 };
 
 
@@ -29,6 +30,13 @@ const createNamedItemReducer = (name  ) => {
                 return { ...state, 
                     selectedItem: action.selectedItem                    
                 }                                                   
+            case `${name}_`+actionTypes.ITEMS_UPDATE_FILTER: {
+                const filters = {...state.filters};
+                filters[action.filterName] = action.filterValue
+                return { ...state, 
+                    filters
+                }                                                    
+            }                                           
             default:
                 return state;    
         }

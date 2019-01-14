@@ -245,7 +245,7 @@ const mapStateToProps = state => {
   const mapDispatchToProps = dispatch => {
     return {
       onLoadEmailAccounts: () => {
-        const fetchFn = api.getEmailsAccounts({pageNumber: 0, rowsPerPage: 10});
+        const fetchFn = api.getEmailsAccounts;
         const action = actions.changeItemsPage(itemTypes.EMAIL_ACCOUNT, 0, 10, fetchFn);      
         dispatch(action);
       }      

@@ -3,8 +3,8 @@
 module.exports = {
   up: (queryInterface, Sequelize) => {
     return queryInterface.bulkInsert('EmailAccounts', [
-      { id: '1', address: 'email@example.com', createdAt: new Date(), updatedAt: new Date()},
-      { id: '2', address: 'email2@example.com', createdAt: new Date(), updatedAt: new Date()}        
+      { address: 'email@example.com', createdAt: new Date(), updatedAt: new Date()},
+      { address: 'email2@example.com', createdAt: new Date(), updatedAt: new Date()}        
     ], {});
   },
 

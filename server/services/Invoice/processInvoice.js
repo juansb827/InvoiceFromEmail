@@ -9,7 +9,7 @@ const {
   sequelize,
   Sequelize
 } = require("../../db/models");
-const appUtils = require('../../lib/appUtils');
+const appUtils = require("../../lib/appUtils");
 const { Op } = Sequelize;
 
 module.exports = async (invoiceXML, attachment, companyId) => {
@@ -18,18 +18,19 @@ module.exports = async (invoiceXML, attachment, companyId) => {
   }
 
   let invoice = null;
-  try {    
+  try {
     invoice = await invoices.extractData(invoiceXML);
   } catch (e) {
     await Attachment.update(
       {
         processingState: "ERROR",
-        errorCause: e.message
+        errorCause: e.message,
+        retries: 3 
       },
       {
         where: { id: attachment.id }
       }
-    );    
+    );
     //TODO: error managment when its file upload
   }
 
@@ -57,6 +58,13 @@ module.exports = async (invoiceXML, attachment, companyId) => {
       }
 
       await last;
+
+      Email.update(
+        { invoiceCount: sequelize.literal('"invoiceCount" + 1')   },
+        { 
+          transaction: t,
+          where: { id: attachment.emailId } }
+      );
 
       return Attachment.update(
         {
@@ -98,4 +106,3 @@ module.exports = async (invoiceXML, attachment, companyId) => {
     );
   }
 };
-
