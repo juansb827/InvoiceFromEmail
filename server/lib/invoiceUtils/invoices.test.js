@@ -1,10 +1,16 @@
 const Invoices = require('./invoices');
+const fs = require('fs');
+ 
+async function lel() {
+  const invoiceStr = await new Promise((resolve, reject) => {
+    fs.readFile('Files/face_F0900547176003a6a62782.xml', "utf8", function(err, data) {
+      if (err) {
+        reject(err);
+      }
+      resolve(data);
+    });
+  }); 
+  const ans = Invoices.extractData(invoiceStr);
+}  
+lel();
 
-Invoices.processInvoice("Files/face_F0900547176003a6a62782.xml", 3, {
-    id: 12,
-    emailId: 3  
-  }).then(invoice => {
-    console.log(invoice);
-  }).catch(err => {
-      console.log('err', err);
-  });
